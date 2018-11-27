@@ -18,6 +18,7 @@
 \usepackage{array}
 \usepackage{makecell}
 \usepackage{longtable, tabu}
+\usepackage{marginnote}
 
 \usepackage{xargs} 
 \usepackage[pdftex,dvipsnames]{xcolor}
@@ -57,7 +58,7 @@
 \usepackage{nameref,hyperref}
 
 % this is for the title
-\title{Towards a Massively Scaling \gls{cpu} Implementation of Cortical Dynamics, a Phonetic Invariance Case Study Explanation}
+\title{Towards a Massively Scaling \gls{cpu} Implementation of Cortical Dynamics}
 
 % those are the authors
 \author[1]{Dario Dematties}
@@ -117,6 +118,33 @@ Ciudad de Mendoza, Mendoza, Argentina}
 % this is the first section in my paper; it is called "Introduction"
 \section{Introduction}
 
+\info{\textbf{Why} this paper \textbf{fills} the \textbf{gap} in scientific knowledge? \textbf{Why} does this \textbf{gap} \textbf{need} to \textbf{be} \textbf{filled}?}
+\info{\textbf{Identify} the knowledge gap. \textbf{Explain} why it needs to be filled. \textbf{Summarize} how the study attempts to fill that gap and why.}
+\info{\textbf{Step 1}: Show what is already known. (Background Information). \textbf{Step 2}: Show the gap knowledge. \textbf{Step 3}: Show how your study fills the knowledge gaps. (Purpose and Hypothesis).}
+
+Neuroscience research has made an outstanding contribution in the last decades providing the scientific community in general with a level of knowledge about the brain that nobody had before. With increasing progress, more in-depth understanding on the brain organization including the thalamus and the cerebral cortex is revealed. Yet, \gls{ai} mainstreams seem to ignore great part of that knowledge. This fact could be attributed--at least in part--to the success accomplished by some \gls{ai} approaches–such as Deep Convolutional Neural Networks–which while ignoring biology have achieved classification accuracy levels without precedent in the last years. Nevertheless some researchers from \gls{ai} community support the idea that in order to overcome current \gls{ai} limitations and to get really intelligent machines it will be necessary to observe more the brain. In such sense, to better understand and explore more deeply how the brain may process information it is essential to use more complex and biophysically accurate neuron and network models.
+
+The model of \gls{hh}~\cite{HODGKIN199025}--for example--simulates synaptic receptors and ion channels explicitly, nonetheless, the most interesting are the works, the more limited they are by the size and complexity of the networks. There are some alternative models such as spiking model~\cite{Izhikevich2004SpiketimingDO} and integrate and fire model~\cite{1333071} which have been proposed as a simplification of the \gls{hh} model. Such models demand less computational power, but those are not able to directly simulate the biological dynamics present on ion channels. On the other extreme we find \gls{dl} applications~\cite{lecun_deep_2015} which slightly inspired by the biology of the visual ventral pathway, have dramatically improved the state-of-the-art in many domains concerning \gls{ai} ignoring--at the same time--important biological facts and giving priority to computational efficiency and classification accuracy. 
+
+Finding the appropriate level of detail in modeling the brain seems to be the holy grail in order to disentangle the mysteries behind animal behavior. In~\cite{Dematties2018} we followed the main guidelines applied in~\cite{10.3389/fncir.2016.00023} gathering what are--under our point of view--only relevant neuro-anatomical and neuro-physiological facts in order to process information in cortical tissue. In such work we aimed to gather only biologically relevant aspects avoiding loading simulations with excessive computational burden and--at the same time--capturing the essence of the information processing properties in the cortex.
+
+Regarding software for computational modeling implementation, in the last years, extremely fast evolving and powerful \gls{dl} frameworks have established a dynamical landscape. The first generation of \gls{dl} frameworks--which had wide adoption in the scientific community--was built mainly in academia. \gls{caffe} was from Berkeley, Torch was developed originally in \gls{nyu} in collaboration with Facebook and Theano was mostly built at University of Montreal. The next generation originated in industry though, \gls{caffe}2 and Pytorch are from Facebook while TensorFlow is from Google. It is an interesting shift in the landscape given in the last years that gives us an idea about the level of development, refinement and sophistication that such frameworks could offer when starting a brain model or an \gls{ai} implementation~\cite{Bahrampour2015ComparativeSO,7979887}. Nevertheless, there are three main reasons that could lead to the use of one of those frameworks rather than just writing the code from scratch. 
+
+\begin{itemize}
+	\item The first reason is that these frameworks enable to easily deal and work with big computational graphs without worrying about all those bookkeeping details.
+	\item The second reason is that whenever working in \gls{dl} it will be always necessary to compute gradients, i.e. to compute some loss and then to compute the gradients about weights with respect to the loss. It would be better to make these operations as automated as possible. After all, nobody wants to struggle writing such code. Everyone wants the framework to handle all these backpropagation details. So the common scenario is writing only the forward pass of the network and having the backward pass sort of free without any significant addition to the code.
+	\item And finally it is desirable to have all this stuff running efficiently on \glspl{gpu} so nobody have to worry too much about those low level hardware details such as cuBLAS and cuDNN packages in \gls{cuda}, moving data between the \gls{cpu} and the \gls{gpu}, etc. Everybody can keep all those messy details hidden by these tools which take care of them.
+\end{itemize}
+
+With those essential points in mind, we had to consider important aspects to take into account in order to pursue the implementation of our computational model. Firstly, the biological plausibility of our model freesed us from the need to compute gradients. Even though there exist important works supporting the idea that backpropagation could be a phenomenon happening in cortical tissue~\cite{Guerguiev2017TowardsDL}, we think that there is not enough evidence as to include so complex mechanism in our model yet. Instead, we decided to be conservative in that respect. Secondly, \gls{dl} frameworks are mainly biased towards \gls{gpu} parallelization on \gls{cuda} cores. Albeit those frameworks have been extremely optimized to take the maximum advantage especially from NVIDIA cards, too many conditions has to be satisfied in order to get the best performance. Although such frameworks have made an outstanding progress in the last years together with the development of their complementary hardware, we glimpsed an acute specialization of such technologies towards the precise development of certain \gls{dl} frameworks with little room for innovative and specifically biologically plausible implementations. In that sense, one of the biggest problems in such approaches arise when trying to implement neural populations with sparse or random connectivity structures. Those implementations--strongly demanded in biologically plausible modelling--compromise coalescence in \gls{gpu} cards and seriously impairs performance~\cite{doi:10.3109/0954898X.2012.739292}.
+
+Following this line, we implemented our model in \CC14 using \gls{oop} paradigm and parallelized it by means of a hybrid strategy using \gls{mpi} and \gls{omp}. The \gls{oop} paradigm gave us a powerful tool to compose modular structures allowing the manage of complex computational graphs. \gls{mpi} enabled our model to run in distributed memory systems in a coherent and stable way and \gls{omp} provided the fine grained distribution of the workload inside each compute node with the option to schedule the \gls{omp} threads dynamically, to manage different options of thread affinity and to vary the number of threads in each compute node among other options. Finally, the use of \gls{stl} containers with the header \texttt{<algorithm>} which defines a collection of functions especially designed to be used on ranges of elements, provided our implementation with \gls{simd} vector parallelization in each thread.
+
+\info{Write in active voice when possible. Write concise sentences. Use stronger verbs when possible. Do not use first person pronouns. Organize your thoughts from broad to specific.}
+
+
+
+
 %\subsection{Motivation}
 
 %Behavioral evidence shows that humans and other animals can classify phonemes as well as other linguistic units categorically. They can also generalize in the presence of the variability imposed by different speakers with different pitches and prosody, even in noisy and reverberant environments~\cite{kuhl_1975, kuhl_1983, kluender_1998, pons_2006, hienz_1996, dent_1997, lotto_1997}.
@@ -157,70 +185,87 @@ Ciudad de Mendoza, Mendoza, Argentina}
 
 \subsection{Our Contributions}
 
-%\begin{itemize}
+\begin{itemize}
 
-%\item We implemented a completely unsupervised and biologically inspired computational model which incorporates the above mentioned cortical features. Our model returns phonetic classification accuracy levels similar to those of state-of-the-art deep pattern classification approaches.
+\item Implementation of a completely unsupervised and biologically inspired computational model which incorporates key properties from the mammalian cortex and returns phonetic features that improve the classification accuracy levels of the \gls{svm} algorithm in word classification tasks~\cite{Dematties2018}.
 
-%\item We implemented our algorithms in standard \CC14 using \gls{stl} containers and the \gls{oop} paradigm in a set of classes interrelated by inheritance and composition.
-%\item We parallelized the code by means of a hybrid \gls{mpi}+\gls{omp} paradigm and used \gls{mpi} I/O parallel file system.
-%\item We implemented our own set of libraries in order to save the model status in Matlab/Octave file formats.
-%\item Our implementation has Checkpoint and Restart capacity in its training stage where there is total flexibility in terms of the number of ranks with which the execution is restarted.
-%\item In order to produce the inputs from auditory streams we followed main guidelines from Chi T. et al.~\cite{chi_2005}. To that end, we implemented an algorithm called \gls{mrstsa}. Our implementation follows primarily the cortical section in~\cite{chi_2005} rather than its sub-cortical counterpart. We implemented the algorithm in C and parallelized it by means of \gls{mpi}-\gls{omp} hybrid paradigm using \gls{omp} parallel sections.
-%\item In order to generate the corpora audio files we call a Festival text to speech synthesizer~\cite{festival2014} implementing a Python code parallelized by means of \gls{mpi} package for Python called mpi4py.
-%\item We performed all computational experiments on Cooley, a visualization and analysis cluster at Argonne National Laboratory.
+\item Implementation of our algorithms in standard \CC14 using \gls{stl} containers and the \gls{oop} paradigm in a set of classes interrelated by inheritance and composition.
+\item Parallelization of the code by means of a hybrid \gls{mpi}+\gls{omp} paradigm and usage of \gls{mpi} I/O parallel file system.
+\item Implementation of our own set of libraries in order to save the model status in Matlab and Octave file formats. \improvement{Add the capacity of saving arrays in sparse format in a conditional way}
+\item Incorporation of Checkpoint and Restart capacity in the training stage where there is total flexibility in terms of the number of ranks with which the execution is restarted.
+\item In order to produce the inputs from auditory streams we followed main guidelines from Chi T. et al.~\cite{chi_2005} and implemented an algorithm called \gls{mrstsa}. Our implementation follows primarily the cortical section in~\cite{chi_2005} rather than its sub-cortical counterpart. We implemented the algorithm in C and parallelized it by means of \gls{mpi}+\gls{omp} hybrid paradigm using \gls{omp} parallel sections.
+\item In order to generate the corpora audio files we call Festival text to speech synthesizer~\cite{festival2014} implementing a Python code parallelized by means of a \gls{mpi} package for Python called mpi4py.
+\item Performing of all computational experiments on Cooley~\cite{noauthor_cooley_nodate}, a visualization and analysis cluster at Argonne National Laboratory.
 
-	%\begin{itemize}
+	\begin{itemize}
 		%\item We ran science simulations using up to 49 nodes (one \gls{mpi} rank per node) and 9 \gls{omp} threads per node/rank. We tested the phonetic feature invariance capacity of our cortical implementation--in a stage called \gls{el}--in several word classification tasks.
 		%\item We ran science tests on several models with different sizes and implemented a procedure similar to \emph{Self-taught Learning} developed in \cite{Raina:2007:SLT:1273496.1273592}. 
 		%\item We compared the \gls{el} performance with the performance of the features returned by the \gls{mrstsa} algorithm by means of \gls{svm} classification of the features delivered by each algorithm (Fig. \ref{fig:Experiment}).
-		%\item We ran performance tests on the \gls{el} using up to 64 nodes (one \gls{mpi} rank per node) and 12 \gls{omp} threads per node/rank. We performed strong and weak scaling tests on Cooley nodes.
-		%\item We ran performance tests on audio corpora generation algorithm in python using up to 6 nodes running 64 \gls{mpi} processes on 64 \glspl{cpu}. We performed strong and weak scaling tests on Cooley nodes.
-		%\item We ran performance tests on the \gls{mrstsa} algorithm using up to 64 nodes (one \gls{mpi} rank per node) and up to 5 \gls{omp} threads per node/rank. We performed strong and weak scaling tests on Cooley nodes.
+		\item Conducting of scaling tests on the \gls{el}--the central algorithm in our model--using up to 64 nodes (one \gls{mpi} rank per node) and up to 8 \gls{omp} threads per node/rank. Performing of strong and weak scaling tests and measurement of scaling efficiency on Cooley nodes.
+		\item Conducting of scaling tests on the \gls{mrstsa} algorithm using up to 64 nodes (one \gls{mpi} rank per node) and up to 5 \gls{omp} threads per node/rank. Performing of strong and weak scaling tests. Measurement of scaling efficiency on Cooley nodes.
+		\item Conducting of scaling tests on audio corpora generation algorithm in python using up to 6 nodes running 64 \gls{mpi} processes on 64 \glspl{cpu}. Performing of strong and weak scaling tests. Measurement of scaling efficiency on Cooley nodes.
 
-	%\end{itemize}
+	\end{itemize}
 
-%\end{itemize}
+\end{itemize}
 
-
-
-
-
-\section{Literature Review}
-
-%To understand how phonetic categories and word-like units are acquired, several computational theories have been developed \cite{rasanen_2012}. In the context of such theories, the main idea has been to explain relevant aspects of phonetic acquisition by means of human engineered features. Nevertheless, \emph{lack of invariance} phenomenon in speech perception \cite{appelbaum_1996} seems to be one of those scientific problems which cannot be solved by spontaneous human reasoning, given the immense amount of interrelated variables involved in phonetic categorization processes. In that sense, \emph{deep learning} architectures--as a subfield inside of \emph{representation learning}--have shown unprecedented performance in the assistance of conventional machine learning techniques, which for decades  required careful engineering in order to reach an effective feature extraction design \cite{lecun_2015}.
+The measurements of scaling efficiency returned by the tests conducted in this paper allow us to foresee an efficient use of high-end parallel computing resources. In this paper we have shown a viable parallelization approach for highly flexible implementations of cortical brain models in which data coalescent is not a tight requirement but rather an additional resource to speedup execution and to increment parallel performance by means of \gls{stl} containers. We have shown the versatility of this parallelization scheme on our brain inspired computational model of cortical dynamics with a random and a highly sparse connection profile. In this way we can claim that this parallelization strategy is an ideal procedure to approach new computational implementations, with more biological plausibility and with more irregular and unstructured data-set in high-end leadership computer resources.
 
 
-\subsection{\glspl{cpu} vs. \glspl{gpu} for \gls{ai} applications}
 
-\glspl{cpu} pipeline their instructions to the extreme in order to keep all the datapath in the chip busy. Superscalar designs in \glspl{cpu} allow each processor to actually have multiple datapaths, in this way multiple instructions can be exectuted simultaneously, one in each datapath. It is not uncommon for a superscalar \gls{cpu} to have multiple \glspl{alu} and \glspl{fpu}, for each datapath. Vector processors, or \gls{simd} processors--which are a more specific variant of superscalar architectures--have specialized hardware for performing vector operations such as vector addition, vector multiplication, and other operations. Vector processors perform an instruction on all data elements of a vector or  array simultaneously--in parallel. In a superscalar or similar processor design, there are multiple execution units that can be used to process pieces of data simultaneously. However, these execution units are not always used at the same time, and some processing power is lost. It is possible to feed instructions to all the execution units by taking the instructions out of their original order. \gls{oooe} is a mechanism that a processor has for executing instructions out of their original order, in an attempt to do more work in parallel and execute programs faster. Hyperthreading is the name for a technology developed by Intel which works by duplicating some architectural components of the processor, such as the status flags, the control registers, and the general purpose registers. Hyperthreading does not, however, duplicate any of the execution units. In a hyperthreaded system, it appears to the operating system that there are two or more separate processors, when there is only one processor. The \gls{oooe} engine feeds instructions from multiple separate execution threads to the execution cores, in an atempt to keep all of the cores simultaneously busy. In general hyperthreading increases performance, although in some cases this additional complexity could actually ending up decreasing it. Taking the idea of superscalar operations to the next level, companies put multiple microprocessor cores onto a single chip and make the cores run in parallel.
 
-Modern \glspl{gpu} are highly parallel programmable processors which reach peak arithmetic and memory bandwidth that could substantially outpace its \gls{cpu} counterparts for some specific tasks. Programmable units in a \gls{gpu} follow a \gls{spmd} programming model. For efficiency, the \gls{gpu} processes many elements (vertices or fragments in an image for example) in parallel using the same program. Each element is independent from the other elements, and in the base programming model, elements cannot communicate with each other. All \gls{gpu} programs must be structured in this way: many parallel elements, each processed in parallel by a single program. A code written in this manner is considered \gls{simd}.
 
-\glspl{gpgpu} is a methodology for \gls{hpc} that uses graphics processing units to process data. The characteristics of graphics algorithms that have enabled the development of extremely high-performance special purpose graphics processors are obviously useful for other \gls{hpc} algorithms. This same special-purpose hardware approach can be used to accelerate those algorithms as well. Algorithms well-suited to \gls{gpgpu} implementation are those that are data parallel and throughput intensive. On the one hand, data parallel allows a processor execute the operation on different data elements simultaneously. On the other hand, throughput intensive comes from the fact that the algorithm is going to process many of data elements, in this way there will be plenty to operate in parallel. Taking advantage of these two properties, \glspl{gpu} achieve extreme performance by incorporating lots of relatively simple processing units to operate on many data elements simultaneously.
 
-Pixel-based applications such as computer vision and video and image processing are very well suited to \gls{gpgpu} technology. From its origins, \glspl{gpu} computational requirements were centered in real-time rendering which requires billions of pixels per second, and each pixel requires hundreds or more operations. \glspl{gpu} must deliver an enormous amount of compute performance to satisfy the demand of complex real-time applications. In this manner, throughput ended up being more important than latency. \gls{gpu} implementations prioritize throughput over latency because the human visual system operates on millisecond time scales, while operations within a modern processor take nanoseconds. This six-order-of-magnitude gap between such operations leads to the important conclusion that the latency of any individual operation is unimportant on such applications.
 
-Architecturally speaking, \glspl{cpu} tend to have a smaller number of cores than \glspl{gpu} but with lots of cache memory that can handle a relatively small number of software threads at a time. In contrast, \glspl{gpu} have more cores than \glspl{cpu} and can handle thousands of threads simultaneously thanks to the fact that \glspl{gpu} take their superscalar (vector) architecture to the extreme. Nevertheless, each thread in a \gls{gpu} does not have a so complex low latency cache memory hierarchy system as \glspl{cpu} do have. A comparison between 2 high end computing devices is shown in Table \ref{CPU_GPU_Comparison}. 
 
-\begin{table}[h!]
-\centering
-\caption{High end \gls{cpu} vs. \gls{gpu} comparison}
-\begin{tabular}{|l|l|l|}
-\hline
-                     & Intel® Xeon® Processor E7-8894 v4 & NVIDIA® Tesla™ P100 GPU \\ \hline
-Number of Cores      & 24 Hyper-Threading Cores          & 56 Streaming Multiprocessors   \\ \hline
-Number of Threads    & 48 Threads                        & 3584 CUDA Cores    \\ \hline
-Max Memory Bandwidth & 85 GB/s                           & 732 GB/s                \\ \hline
-Price                & 9K                                & 7K                      \\ \hline
-\end{tabular}
-\label{CPU_GPU_Comparison}
-\end{table}
 
-As can be seen in the table, there is a very important parameter that matters to most of the applications on \gls{hpc}. This parameter is the available memory bandwidth between the processors and the pull of memory in the device. Trying to ignore any other specification we can concentrate on this factor of about 9 units of the \gls{gpu} outperforming the \gls{cpu} in terms of memory bandwidth. Based on this factor now we can calibrate our expectations and see if it is really convenient to adapt our code to run on \gls{gpu} devices in order to get a speed improvement factor of--at best--9. Yet, such factor of 9 comes from peak bandwidths and it is very difficult to achieve peak bandwidths, instead only a fraction of those peaks is generally achievable. From a theoretical perspective it will be always easier to be closer to a \gls{cpu} peak bandwidth than to a \gls{gpu} peak bandwidth taking into account the cache hierarchy present on \glspl{cpu}. In fact, general experience shows that a fraction of 50 to 60 percent approximation is really achievable to the peak bandwidth on \glspl{gpu} \cite{}. On these circumstances, we can aspire to a factor of just 5 in the speed increase of our code by running it on \gls{gpu} devices in comparison to \glspl{cpu}.
 
-The \gls{cpu} has 24 hyper-threading cores while the \gls{gpu} has 56 streaming multiprocessors which can be taken as equivalent to \gls{cpu} cores. Even though NVIDIA claims 3584 \gls{cuda} cores in front of just 48 threads from Intel, the truth is that \gls{cuda} cores can not be directly compared to \glspl{cpu} threads. The complex cache memory system present in \glspl{cpu} provides \gls{cpu} threads with a powerful independence no achievable for \gls{gpu} cores. The complexity of \gls{cpu} instructions enable \gls{cpu} threads to do quite a lot in an extremely independent way. On the other hand, even when  3584 \gls{gpu} cores could be seen as astronomic next to the 48 threads available in a \gls{cpu}, they run at a much lower clock speed and do not have the independence \gls{cpu} threads do have.
+\section{Related Work}
 
-Recapitulating we can say that original design goals on \glspl{cpu} were mainly directed towards making single threads very fast by means of reducing latency through large cache systems and speculative execution including branch and memory dependence prediction in pipelined processors. In contrast, for \glspl{gpu} throughput matters more than single threads, hiding memory latency through massive parallelism and avoiding in this way the high frequency clock speeds present in \glspl{cpu}. In Fig.~\ref{fig:CPU_to_GPU_metamorphosis} it can be seen the metamorphosis process of ideas in order to get to the current \gls{gpu} architecture from \glspl{cpu}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{\glspl{cpu} vs. \glspl{gpu} for \gls{ann} Large Simulations}
+
+%\glspl{cpu} pipeline their instructions to the extreme in order to keep all the datapath in the chip busy. Superscalar designs in \glspl{cpu} allow each processor to actually have multiple datapaths, in this way multiple instructions can be exectuted simultaneously, one in each datapath. It is not uncommon for a superscalar \gls{cpu} to have multiple \glspl{alu} and \glspl{fpu}, for each datapath. Vector processors, or \gls{simd} processors--which are a more specific variant of superscalar architectures--have specialized hardware for performing vector operations such as vector addition, vector multiplication, and other operations. Vector processors perform an instruction on all data elements of a vector or  array simultaneously--in parallel. In a superscalar or similar processor design, there are multiple execution units that can be used to process pieces of data simultaneously. However, these execution units are not always used at the same time, and some processing power is lost. It is possible to feed instructions to all the execution units by taking the instructions out of their original order. \gls{oooe} is a mechanism that a processor has for executing instructions out of their original order, in an attempt to do more work in parallel and execute programs faster. Hyperthreading is the name for a technology developed by Intel which works by duplicating some architectural components of the processor, such as the status flags, the control registers, and the general purpose registers. Hyperthreading does not, however, duplicate any of the execution units. In a hyperthreaded system, it appears to the operating system that there are two or more separate processors, when there is only one processor. The \gls{oooe} engine feeds instructions from multiple separate execution threads to the execution cores, in an atempt to keep all of the cores simultaneously busy. In general hyperthreading increases performance, although in some cases this additional complexity could actually ending up decreasing it. Taking the idea of superscalar operations to the next level, companies put multiple microprocessor cores onto a single chip and make the cores run in parallel.
+
+%Modern \glspl{gpu} are highly parallel programmable processors which reach peak arithmetic and memory bandwidth that could substantially outpace its \gls{cpu} counterparts for some specific tasks. Programmable units in a \gls{gpu} follow a \gls{spmd} programming model. For efficiency, the \gls{gpu} processes many elements (vertices or fragments in an image for example) in parallel using the same program. Each element is independent from the other elements, and in the base programming model, elements cannot communicate with each other. All \gls{gpu} programs must be structured in this way: many parallel elements, each processed in parallel by a single program. A code written in this manner is considered \gls{simd}.
+
+%\glspl{gpgpu} is a methodology for \gls{hpc} that uses graphics processing units to process data. The characteristics of graphics algorithms that have enabled the development of extremely high-performance special purpose graphics processors are obviously useful for other \gls{hpc} algorithms. This same special-purpose hardware approach can be used to accelerate those algorithms as well. Algorithms well-suited to \gls{gpgpu} implementation are those that are data parallel and throughput intensive. On the one hand, data parallel allows a processor execute the operation on different data elements simultaneously. On the other hand, throughput intensive comes from the fact that the algorithm is going to process many of data elements, in this way there will be plenty to operate in parallel. Taking advantage of these two properties, \glspl{gpu} achieve extreme performance by incorporating lots of relatively simple processing units to operate on many data elements simultaneously.
+
+%Pixel-based applications such as computer vision and video and image processing are very well suited to \gls{gpgpu} technology. From its origins, \glspl{gpu} computational requirements were centered in real-time rendering which requires billions of pixels per second, and each pixel requires hundreds or more operations. \glspl{gpu} must deliver an enormous amount of compute performance to satisfy the demand of complex real-time applications. In this manner, throughput ended up being more important than latency. \gls{gpu} implementations prioritize throughput over latency because the human visual system operates on millisecond time scales, while operations within a modern processor take nanoseconds. This six-order-of-magnitude gap between such operations leads to the important conclusion that the latency of any individual operation is unimportant on such applications.
+
+%Architecturally speaking, \glspl{cpu} tend to have a smaller number of cores than \glspl{gpu} but with lots of cache memory that can handle a relatively small number of software threads at a time. In contrast, \glspl{gpu} have more cores than \glspl{cpu} and can handle thousands of threads simultaneously thanks to the fact that \glspl{gpu} take their superscalar (vector) architecture to the extreme. Nevertheless, each thread in a \gls{gpu} does not have a so complex low latency cache memory hierarchy system as \glspl{cpu} do have. A comparison between 2 high end computing devices is shown in Table \ref{CPU_GPU_Comparison}. 
+
+%\begin{table}[h!]
+%\centering
+%\caption{High end \gls{cpu} vs. \gls{gpu} comparison}
+%\begin{tabular}{|l|l|l|}
+%\hline
+                     %& Intel® Xeon® Processor E7-8894 v4 & NVIDIA® Tesla™ P100 GPU \\ \hline
+%Number of Cores      & 24 Hyper-Threading Cores          & 56 Streaming Multiprocessors   \\ \hline
+%Number of Threads    & 48 Threads                        & 3584 CUDA Cores    \\ \hline
+%Max Memory Bandwidth & 85 GB/s                           & 732 GB/s                \\ \hline
+%Price                & 9K                                & 7K                      \\ \hline
+%\end{tabular}
+%\label{CPU_GPU_Comparison}
+%\end{table}
+
+%As can be seen in the table, there is a very important parameter that matters to most of the applications on \gls{hpc}. This parameter is the available memory bandwidth between the processors and the pull of memory in the device. Trying to ignore any other specification we can concentrate on this factor of about 9 units of the \gls{gpu} outperforming the \gls{cpu} in terms of memory bandwidth. Based on this factor now we can calibrate our expectations and see if it is really convenient to adapt our code to run on \gls{gpu} devices in order to get a speed improvement factor of--at best--9. Yet, such factor of 9 comes from peak bandwidths and it is very difficult to achieve peak bandwidths, instead only a fraction of those peaks is generally achievable. From a theoretical perspective it will be always easier to be closer to a \gls{cpu} peak bandwidth than to a \gls{gpu} peak bandwidth taking into account the cache hierarchy present on \glspl{cpu}. In fact, general experience shows that a fraction of 50 to 60 percent approximation is really achievable to the peak bandwidth on \glspl{gpu} \cite{Lee:2010:DGV:1816038.1816021}. On these circumstances, we can aspire to a factor of just 5 in the speed increase of our code by running it on \gls{gpu} devices in comparison to \glspl{cpu}.
+
+%The \gls{cpu} has 24 hyper-threading cores while the \gls{gpu} has 56 streaming multiprocessors which can be taken as equivalent to \gls{cpu} cores. Even though NVIDIA claims 3584 \gls{cuda} cores in front of just 48 threads from Intel, the truth is that \gls{cuda} cores can not be directly compared to \glspl{cpu} threads. The complex cache memory system present in \glspl{cpu} provides \gls{cpu} threads with a powerful independence no achievable for \gls{gpu} cores. The complexity of \gls{cpu} instructions enable \gls{cpu} threads to do quite a lot in an extremely independent way. On the other hand, even when  3584 \gls{gpu} cores could be seen as astronomic next to the 48 threads available in a \gls{cpu}, they run at a much lower clock speed and do not have the independence \gls{cpu} threads do have.
+
+Original design goals on \glspl{cpu} were mainly directed towards making single threads very fast by means of reducing latency through large cache systems and speculative execution including branch and memory dependence prediction in pipelined processors. In contrast, for \glspl{gpu} throughput matters more than single threads, hiding memory latency through massive parallelism and avoiding in this way the high frequency clock speeds present in \glspl{cpu}. Fig.~\ref{fig:CPU_to_GPU_metamorphosis} shows the metamorphosis process of ideas in order to get to the current \gls{gpu} architecture from \glspl{cpu}.
 
 \begin{figure}[h!]
     \centering
@@ -229,13 +274,17 @@ Recapitulating we can say that original design goals on \glspl{cpu} were mainly 
     \label{fig:CPU_to_GPU_metamorphosis}
 \end{figure}
 
-Essentially, every operation on a \gls{gpu} is parallel. On a \gls{cpu} instead, the compiler has to actually be persuaded that an operation can be vectorized. In order to do that, the operation on the \gls{cpu} has to satisfy some criteria, for example, the data used for the operation has to be aligned in memory in a certain way. That is a pretty big restriction. At the core level every operation on a \gls{gpu} is vectorized, there is no alternative. There is no need of persuading the compiler on order to make vector operations on a \gls{gpu}. Then each \gls{cpu} core executes scalar or vector operations while each \gls{gpu} core only executes vector instructions. 
+Essentially, every operation on a \gls{gpu} is parallel. On a \gls{cpu} instead, the compiler has to actually be persuaded that an operation can be vectorized. In order to do that, the operation on the \gls{cpu} has to satisfy some criteria, for example, the data used for the operation has to be aligned in memory in a certain way. That is a pretty big restriction. At the core level every operation on a \gls{gpu} is vectorized, there is no alternative. There is no need of persuading the compiler in order to make vector operations on a \gls{gpu}. Then each \gls{cpu} core executes scalar or vector operations while each \gls{gpu} core only executes vector instructions. Nevertheless, the easily accessed vectorization is not for free since coalescence is a strong requirement to get high parallel efficiency measurements on \glspl{gpu}.
 
-As a final aside note that matters for \gls{gpu} market and its relationship to \gls{dl} applications, NVIDIA--unlike AMD--has been pushing a lot in the last years for \gls{dl}. A lot of engineering effort has been invested by NVIDIA to make their hardware better suited for \gls{dl}. As an example of that we can cite the last Volta tensor cores which can do an $A*B+C$ 4 by 4 matrix operation completely in parallel. As a result NVIDIA is pretty dominant in \gls{dl} currently.
+In reference to \gls{gpu} market and its relationship to \gls{dl} applications, NVIDIA--unlike AMD--has been pushing a lot in the last years for \gls{dl}. A lot of engineering effort has been invested by NVIDIA to make their hardware better suited for \gls{dl}. As an example of that we can cite the last Volta tensor cores which can do an $A*B+C$ 4 by 4 matrix operation completely in parallel. As a result NVIDIA is pretty dominant in \gls{dl} currently.
 
+In the realm of biologically plausible computational models the \gls{cpu}/\gls{gpu} dichotomy is not as clearly defined as in \gls{dl}. In~\cite{doi:10.3109/0954898X.2012.739292} for example, the authors analyzed the advantages and drawbacks of the \gls{cpu} and \gls{gpu} parallelization in different shared memory parallel paradigms, such as \gls{omp}, \gls{cuda} and \gls{opencl} of mean-firing rate neurons. The authors inspected different speed limiters such as floating point precision, thread configuration, data organization and connectivity structure of the networks. Parallel \gls{cpu} implementations greatly benefited smaller networks, mostly because of cache effects. Large networks--on the other hand--benefited from the \gls{gpu} only if they demanded memory beyond the available on \gls{cpu} caches, otherwise an \gls{omp} implementation was highly preferred. The authors compared several structure representations on the different parallel frameworks showing that on \glspl{cpu}, these representations reached almost the same computation time, on \glspl{gpu} instead, the performance was significantly affected by violations of coalescence induced by heterogeneous data structures. Finally, the most serious problem appeared when the network had a sparse or random connectivity structure, i.e. neurons received connections randomly from other neurons, and not in an organized or ascending order. As the authors pointed out, this totally broke down the performance of \gls{gpu} implementations, while \gls{cpu} were slightly affected. This was maybe the strongest argument against \gls{gpu} implementations of mean-firing rate neural networks, since this sparse connectivity is a repeated pattern in biological networks as well as it is in the computational model presented in this paper.
 
+In~\cite{10.3389/fninf.2015.00019} the authors described a neural simulator that provides a high-level interface to generate rate-coded, spike-coded or hybrid neural networks. The definitions of the networks generate a \CC~library highly optimized for an underlying parallel framework such as \gls{omp} for shared memory systems or \gls{cuda} for \glspl{gpu}. For the \gls{omp} implementation, the number of threads was varied between 2 and 12. For the \gls{cuda} implementation, the default configuration of the simulator (32 threads for the neural variables updates, 192 threads for the weighted sums) was used. With \gls{omp}, the scaling for 1000 neurons was slightly sub-optimal, while the one for 4000 neurons saturated quickly. The situation was reversed with \gls{cuda}. In such case the network with 1000 neurons only achieved a limited speedup ratio, while the network with 4000 neurons achieved a high ratio.
 
+In~\cite{HUQQANI2013349} the authors developed and analyzed two parallel training strategies for backpropagation neural networks for face recognition. This work concentrated on two parallelization environments. On the one hand, \gls{omp} was used on a conventional multithreaded \gls{cpu} and on the other hand \gls{cuda} was used on a \gls{gpu}. The authors concluded that \gls{gpu} based parallelization should be preferred generally to \gls{cpu} based multithreaded program. However, for some simulations with small input and few hidden neurons \gls{cpu} based execution was better.
 
+In this scenario we find a recurrent pattern in which larger networks are benefited from \gls{cuda} while smaller ones are benefited from \gls{omp}. Nevertheless, it is very important to consider key factors such as irregularity, sparseness and randomness of data structures and network connectivity in the context of its relationship with data coalescence in parallel efficiency.
 
 
 
@@ -260,13 +309,21 @@ As a final aside note that matters for \gls{gpu} market and its relationship to 
 
 
 
+\subsection{Multi-Thread and Multi-Process for Parallel \gls{ann} Implementations on Shared Memory Systems}
 
+Olena Schuessler and Diego Loyola~\cite{Schuessler:2011:PTA:1997052.1997062} delineated different methods for the parallelization of artificial neural networks based on the backpropagation algorithm using multithreaded and multicore \glspl{cpu} in a shared memory system. In this work, the authors used \gls{posix} Threads (Pthreads) and \gls{omp} obtaining an increase in computation speed very close to the expected ideal (743\% when using 8 cores). Parallel training implemented in \gls{omp} returned slightly better results compared to Pthreads.
 
+In~\cite{Strey2003ACO}, a thread-based implementation on \gls{omp} and a process-based implementations on \gls{mpi} were compared on a fast shared-memory architecture. Different data and work partitioning strategies as well as the performance of all implementations were explored. It was shown that the \gls{mpi}-based implementations were slightly faster than the \gls{omp}-based ones. The authors pointed out that the lower speedup of \gls{omp}-based implementation seemed to be originated by false cache sharing of data arrays which can be modified by several thread number configurations in the different runs.
 
+In~\cite{6232827} the authors proposed to use \gls{mpi} and \gls{omp} in an \gls{eann} approach for \gls{tsf} based on \gls{eda} that evolved fully connected \glspl{eann}. The experiments used several time series and the number of cores ranged from 1 to 6. In this way authors showed that \gls{mpi} with 5 cores was the best parallelization strategy, the one which took the lowest execution time and made a reasonable use of the computational resources.
 
+In~\cite{6511739} the authors reported an \gls{omp}-based parallelization for the implementation of an asynchronous \gls{snn} simulator with the goal of showing basic core and hyperthreaded parallelization efficiency. The first results showed a parallel efficiency in the ranges of 0.94-0.98 with 4 physical cores and 0.86-0.89 with 8 hyperthreads for 1000 neurons. For 4000 neurons parallel efficiency was in the ranges of 0.86-0.87 with 4 physical cores and 0.56-0.57 with 8 hyperthreads.
 
+In~\cite{Chatzikonstantis:2016:FID:2903150.2903477} the authors presented an inferior-olivary simulation based on extended \glsfirst{hh} models on the Intel Xeon-Xeon Phi host-and-coprocessor single-node system. \gls{mpi} implementation underperformed for the Xeon Phi accelerator since it did not utilize the coprocessor multithreading resources, but performed well on the host. A hybrid implementation improved on \gls{mpi} limitations on the accelerator. \gls{omp}--on the other hand--was the best choice on both computing platforms for smaller networks, in spite of the fact that its performance did not scale linearly in all cases. The accelerator hybrid implementation and the host pure-\gls{mpi} programming method rivalled \gls{omp} for large networks due to their extensibility to multi-node systems.
 
+%The implementation that used \gls{mpi} enabled data-exchanging between cores over shared memory in a single-node system. In each core, a single unit of execution--a \gls{mpi} rank--handled a subset of the neuronal network. Even though the exchanges of data through packages containing all the information required by other cores produced overheads, such strategy outperformed neuron-to-neuron communication. In the \gls{omp} implementation the threads computed in parallel different parts of the network. Since memory was shared between the threads, each one could freely access another thread data. Hence, both computation of the \glspl{ode} and data traffic were carried out locally but cache-coherence produced additional overheads. Overheads were more pronounced when running small networks and creating an excessive number of \gls{omp} threads. In the hybrid implementation, cores were organized into groups-- as \gls{mpi} ranks. Within each group, all cores communicated over shared memory, running \gls{omp} threads for task acceleration. In each group, one “master” core performed single-threaded \gls{mpi} calls for inter-group data-exchange, whereas packing and unpacking of the data was performed by the \gls{omp} threads spawned by the entire group. This implementation was logically extensible to multi-node platforms, with the restriction that each node was organized into different groups.
 
+From a theoretical point of view, on a single node of shared memory system there is no need to generate redundancy of the \emph{heap} or \emph{code} since they are available there to be freely accessed. On the other side \emph{registers}, \emph{counter} and \emph{stack} has to be replicated to stablish a coherent context for each thread of execution. In this way, multi-thread should be preferred over multi-process parallelization in a shared memory system. In \gls{omp} implementations--for example--the threads compute in parallel different parts of the networks. Since memory is shared between threads, each one can freely access another thread data. Hence, both internal network computations and data traffic are carried out locally. Nevertheless, cache-coherence produces additional overheads which are more pronounced when running small networks and creating an excessive number of threads. The implementations that use \gls{mpi} enable data-exchanging between cores over shared memory in a single-node system. In each core, a single unit of execution--a \gls{mpi} rank--handles a subset of a neuronal network and communicates with other ranks using special \gls{mpi} methods. In some cases the heavier \gls{ipc} workload is compensated by the absent of false-shearing phenomenon among \gls{omp} threads. In a hybrid implementation, cores are frequently organized into groups--as \gls{mpi} ranks. Within each group, all cores communicate over shared memory, running \gls{omp} threads for task acceleration. In each group, one “master” thread could perform single-threaded \gls{mpi} calls for inter-group data-exchange, whereas packing and unpacking of the data could be performed by the \gls{omp} threads spawned by the entire group. This kind of implementation is a middle point solution gathering advantages and drawbacks from both strategies which is logically extensible to multi-node platforms.
 
 
 
@@ -285,59 +342,215 @@ As a final aside note that matters for \gls{gpu} market and its relationship to 
 
 
 
-\subsection{Software approaches for \gls{dl} applications}
+\subsection{Parallel \gls{ann} Implementations on Distributed Memory Systems}
 
-In reference to general purpose software tools which could be utilized for \gls{dl}, \gls{cuda} is a parallel computing platform and \gls{api} model created by NVIDIA. By means of \gls{cuda} developers can write code that looks like C but executes directly on \glspl{gpu}. Nevertheless,  writing \gls{cuda} code could end up being a real challenge, since it is very difficult to get a code with good performance, i.e. a code that takes the maximum advantage from all the \glspl{gpu}. Memory hierarchy has to be carefully managed trying to avoid cache mises and branch mispredictions. Then it is actually really hard to write performant \gls{cuda} code. As a result NVIDIA has released many libraries that implement common computational primitives which are highly optimized for \glspl{gpu}. Among such libraries, cuBLAS is an implementation of \gls{blas} on top of the NVIDIA \gls{cuda} runtime. It allows the user to access the computational resources of NVIDIA \gls{gpu}. Another library is cuFFT which is the NVIDIA \gls{cuda} \gls{fft} product. Such libraries are super optimized and run very well on \glspl{gpu}  getting very close to theoretical peak hardware specifications. Another \gls{gpu}-accelerated library is cuDNN which has primitives for deep neural networks. cuDNN provides highly tuned implementations for standard routines such as forward and backward convolution, pooling, normalization, and activation layers. So, in practice nobody tends to write his own \gls{cuda} code, instead everybody will typically be just mostly calling into extremely optimized software that other people have already written.
+In~\cite{6821186} the authors proposed a \gls{mpi}-based parallelization scheme for an asynchronous spiking neural network with more than 50.000 neurons and 300 millions synapses. The proposed solution was evaluated on production \gls{hpc} systems, employing up to 512 parallel processes. The first results showed situations with very good speedup (super-linear relative processes to a reference case with 36 \gls{mpi} processes). Nevertheless, the parallelization strategy chosen had the limitation that one of the parallel processes (the master) only dealt with coordination of worker processes and it was barely involved in computations. It was expected that with the increase of the number of worker processes, a hierarchical organization of the master processes could be needed.
 
-There is another language called \gls{opencl} which is a framework for writing programs that execute across heterogeneous platforms consisting of \glspl{cpu}, \glspl{gpu}, \glspl{dsp},  \glspl{fpga} and other processors or hardware accelerators. Yet, nobody has really spent a great effort trying to get optimized \gls{dl} primitives for this \gls{api}. As a result \gls{opencl} tends to be considerably less performant than the super optimized libraries in \gls{cuda}.
+In~\cite{Pastorelli2015ScalingT1} the authors presented speed-up measurements and strong and weak scaling analysis of a \gls{lif} network running on a range from 1 to 1024 software processes and hardware cores. The authors demonstrated the ability to simulate a grid of 96x96 neural columns, containing a total of 11.4M \gls{lif} neurons with spike-frequency adaptation, and representing 20.4G equivalent synapses. The neural network was distributed over a set of \gls{mpi} processes and the simulations were run on a server platform composed of up to 64 dual-socket nodes. In reference to strong scaling the actual speed-up for a 24x24 grid was 67.3, loosing ~30\% compared to the ideal speed-up (96). The speed-up for the 48x48 grid was 54.2 while the hardware resources increase by a factor 96. For the 96x96 grid the speed-up is 10.8 (16 would be the ideal).
 
-Referring to \gls{dl} frameworks more specifically, the landscape of those frameworks is very dynamic and great changes can be seen year after year. The first generation of \gls{dl} frameworks--which had wide adoption in the scientific community--was built mainly in academia. \gls{caffe} was from Berkeley, Torch was developed originally in \gls{nyu} in collaboration with Facebook and Theano was mostly built at University of Montreal. Yet, the next generation of \gls{dl} frameworks all originated in industry, \gls{caffe}2 and Pytorch are from Facebook while TensorFlow is from Google. It is an interesting shift in the landscape given in the last couple of years (Fig.~\ref{fig:ML_Frameworks}).
+In~\cite{hu2012biophysically} the author proposed a parallel implementation of biophysically realistic neural models using three parallelization strategies: \gls{mpi} parallelization, \gls{mpi} parallelization with dynamic load balancing schemes and Hybrid \gls{mpi}/\gls{omp} parallelization. The author ran the experiments in a distributed memory cluster and the results showed that when the number of processors was small, the \gls{mpi} implementation achieved good performance without load balancing problems. However, with the increasing size of the neural network and the number of processors, the imbalance ratio grew considerably. By exploiting dynamic load balancing techniques, the author successfully balanced the workload among processors. Nevertheless, more computation time was consumed as a result of the large number of message passings between \gls{mpi} processes. Finally, a hybrid \gls{mpi}/\gls{omp} parallelization simulation method showed better speedup than the \gls{mpi} implementation.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.35\textwidth]{ML_Frameworks.png}
-    \caption{Interesting shift from Academia to Industry given in the last couple of years in the development of \gls{dl} frameworks.}
-    \label{fig:ML_Frameworks}
-\end{figure}
 
-Whenever working on \gls{dl}, there is an important concept called \emph{computational graph} which computes all the functions to be run in the model. In the case of a linear classifier for example, certain data $x$ is combined with certain weights $W$ on the network using a matrix multiplier, there will be a computation of some kind of \emph{hinge loss} and a regularization computation too. Sticking together all these different operations emerges the graph structure of the network to be implemented. These graph structures can be pretty complex especially in the case of big \glspl{nn} with many different layers, many different operations and with many different weights spread throughout the network. Hence, the point of \gls{dl} frameworks is really simple. There are three main reasons that could lead to the use of one of those frameworks rather than just writing the code from scratch. 
 
-\begin{itemize}
-	\item The first reason is that these frameworks enable to easily deal and work with these big computational graphs without worrying about all those bookkeeping details.
-	\item The second reason is that whenever working in \gls{dl} it will be always necessary to compute gradients, i.e. to compute some loss and then to compute the gradients about weights with respect to the loss. It would be better to make these operations as automated as possible. After all, nobody wants to struggle writing such code. Everyone wants the framework to handle all these backpropagation details. So the common scenario is writing only the forward pass of the network and having the backward pass sort of free without any significant addition to the code.
-	\item And finally it is desirable to have all this stuff running efficiently on \glspl{gpu} so nobody have to worry to much about those low level hardware details such as cuBLAS and cuDNN in \gls{cuda}, moving data between the \gls{cpu} and the \gls{gpu}, etc. Everybody can keep all those messy details hidden by these tools which take care of them.
-\end{itemize}
 
-Suppose you want to execute a simple computational graph, one having some kind of matrix multiplications and additions. Using Numpy it is extremely simple, but suppose that you want to compute the gradients of a scalar output from the graph with respect to the input vectors. If you are working in Numpy you need to write this backward pass yourself. It can be kind of a pain and a little bit annoying and messy once you get really big and complicated graphs. The other problem with Numpy is that it does not run on \glspl{gpu}, i.e. Numpy is definitely \gls{cpu} only and you are never going to be able to experience or take advantage of these \glspl{gpu} accelerated speedups if you keep working in only Numpy. The goal of most \gls{dl} frameworks these days is to let you write code in the forward pass that looks very similar to Numpy, but letting to run it on \glspl{gpu} and automatically compute all the gradients. That is kind of the picture goal of most of these frameworks. So the general pattern in these frameworks is that you will have to define the variables initializing them and write the forward pass in a very similar fashion to Numpy, in the case of Pytorch the forward pass will be exactly the same than in Numpy. Then using a magic single line of code you will be able to compute all the gradients. The area of variable initialization is where an extremely simple tweak will allow you to cast your variables in order to instruct the compiler to run the code on \glspl{gpu}. In this way the frameworks solve two problems, first you are running your code transparently on \glspl{gpu} and second you are having the frameworks compute all the gradients automatically for you. So for example you will end up having a code written in TensorFlow or Pytorch which looks almost exactly the same than Numpy, which is great because Numpy is a beautiful \gls{api} and is really easy to work with, but you can also compute gradients automatically and you can run on \glspl{gpu} automatically too. 
 
-The prototypical programing paradigm in TensorFlow is to divide the code into two major stages. First some code is devoted to define the computational graph and then, after the graph is defined, another code will run such graph over and over again feeding data into it in order to perform the necessary computations for the network. This is kind of the big common pattern in TensorFlow. First a bunch of code builds the graph and then another code run the graph reusing it many times. In the section that build the graph, firstly some variables are defined. For example some sets of vectors $x$s for the inputs and the intermediate outputs in the network and a some sets of $w$s for the different weights. In TensorFlow, \texttt{placeholder} and \texttt{Variable} objects are going to be the input nodes to the graph. They are like entry points where the graph is run feeding in data and putting them into these input slots.
 
-When a placeholder or a Variable is defined, they are not allocated in memory. They are just defining those input slots in the graph. The difference between a placeholder and a Variable is the memory in which they will be allocated once the graph is run. In the case of a placeholder the consecutive runs will end up copying data back and forth between the \gls{cpu} and the \gls{gpu} in every time step. These objects are generally used to feed the networks with the input and the labels. A Variable on the other hand is a value that lives inside the computational graph--in \gls{gpu} memory--and will persist inside the graph across different time steps when such graph is run. These objects are generally used to store the weights of the network. Since all Variable data lives inside the computational graph, their initialization and update has to be specified inside the graph too in order to avoid great volumes of data movement between the \gls{cpu} and the \gls{gpu}. Those input slots--which are like symbolic variables--are going to be used to perform different TensorFlow operations. It is important to know that such lines of code are not actually computing anything, there is no data in the system since such code is just building up this computational graph data structure telling TensorFlow how is the structure of the network and which operations will be run once real data is put inside the graph. After the loss is computed, TensorFlow is generally instructed to compute all the gradients of the loss with respect to the weights $w$s in the graph using a single line of code. In all this configuration there is no actual computation happening, this is just sort of adding extra operations to the computational graph structure in memory which knows which operations has to be performed once the graph is run.
 
-The next section of the code enters in a TensorFlow session that runs the computational graph and feed it with data. TensorFlow just expects to receive data from Numpy arrays in most cases. Then the different variables are stored in a dictionary and the graph is run with a special function of the session in which the user can specify which part of the graph actually wants as output. TensorFlow offers a lot of tools to make the programmer's life easier, from optimizers to run the complete graph even when it is only necessary to compute some intermediated value--TensorFlow is intelligent enough to implement only the necessary sections of the graph based in the outputs asked by the user--to tools to automate the computation of losses and higher level libraries to handle a lot of details to implement weights configurations of the different layers and activation functions. These libraries manage a lot of architectural details of the graph implementation.
 
-There are many different higher level libraries that programmers build on top of TensorFlow. When working with higher level abstractions such as neural networks some abstract concepts like layers and weights could result really messy and inconvenient in a row computational graph without the use of some wrappers. So there are several packages to help to make the code stile cleaner. There are very popular packages such as Keras which is an open source neural network library written in Python and is capable of running on top of TensorFlow, Microsoft Cognitive Toolkit, or Theano. Keras is designed to enable fast experimentation with deep neural networks and focuses on being user-friendly, modular, and extensible. Keras builds all these computational graphs in the backend. It is important to take into account that there are a great variety of wrapper libraries which work on top of TensorFlow and that even people within Google cannot agree in which one is the right to be used. Tensorflow has also a distributed version which allows programmers to split one graph over multiple machines. As a side note, a lot in the design of TensorFlow is inspired in an earlier framework called Theano from University of Montreal. Generally speaking, the code from a Theano program ends up looking very similar to code in TensorFlow.
 
-In reference to Pytorch, it is different from TensorFlow. There are three explicit different layers of abstraction inside Pytorch. Pytorch has an object called Tensor, which is just like a Numpy array, it is a imperative \texttt{ndarray} and does not know anything about \gls{dl} but it can run on \glspl{gpu}. Another object is the Variable object which is a node in a computational graph and builds up computational graphs, enables the use of gradients, etc. Finally, Pytorch also offers Module objects which are neural network layers which can store state or learnable weights and can be used to compose big networks in a modular way. Fig.~\ref{fig:Pytorch_TensorFlow} shows a simplified equivalence between Pytorch and TensorFlow in terms of the objects and libraries each tool utilizes.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.5\textwidth]{Pytorch_TensorFlow.png}
-    \caption{Row equivalence between Pytorch and TensorFlow objects and libraries.}
-    \label{fig:Pytorch_TensorFlow}
-\end{figure}
 
-As can be seen in the figure, Pytorch is very simple and has less choices involved, which is better in some way since the user does not have to worry about--for example--which higher level wrapper to use. The major difference between Pytorch Tensors and Numpy arrays is that Pytorch Tensors run on \glspl{gpu}. Then having a code that is completely written in Numpy the programmer can make this code running on \glspl{gpu} simply by casting all the Numpy arrays to a different data type by means of just a single line of code. So Pytorch Tensors are Numpy arrays plus \glspl{gpu}, nothing specific to \gls{dl}. The next level of abstraction in Pytorch is the Variable. Moving from Tensors to Variables enables the built of computational graphs which are able to take gradients automatically. Then if \texttt{x} is a Variable, \texttt{x.data} is a Tensor and \texttt{x.grad} is another Variable containing the gradients of the loss with respect to that Tensor in a way that \texttt{x.grad.data} is a Tensor containing those gradients. Pytorch Tensors and Variables have the same \gls{api}, so in any code that works on Pytorch Tensors such Tensors can be casted to Variables and run exactly the same code but in this case the code is running a computational graph rather than just running this imperative operations. So the code ends of looking quite like the Numpy case except that all the gradients come for free.
 
-In Pytorch you can define new autograd functions writing a class with forward and backward functions in terms of Tensors but most of the time you will probably not need to define your own autograd operations since such operations will be already implemented for you. In TensorFlow you can move to something like Keras or TFLearn which give you a higher level \gls{api} to work with rather than has to deal with those row computational graphs. In a similar way in Pytorch you will use the nn package which provides high level for working with layers and weights in networks. Like TensorFlow, Pytorch also has optimizers that--after computing the gradients--optimize all the parameters of the model for you. In Pytorch you will also define your nn Modules where a Module is kind of a neural network layer that can contain either other Modules or trainable weights. The characteristic scenario in Pytorch is defining your own class, defining your model that contains other Modules or not and then you will have some explicit training loop that updates the parameters of the model. One nice quality feature that is offered by Pytorch are DataLoaders. A DataLoader can handle data providing minibatching, shuffling, multithreading, etc for you. This tool can actually use multiple threads in the background to build minibatches offering a continuoum stream input data from disk. As an aside note Pytorch is kind of a newer updated version of an older framework called Torch. Pytorch is pretty much better in a lot of ways than Torch but they actually share a lot of the backend core for computing the Tensors and \gls{gpu} operations on Tensors. Some of the high level differences between Pytorch and Torch is that while Torch is based in Lua Pytorch is obviously based on Python and learning Lua could be kind of a turn off for some people, Torch does not have Autograd, but Torch is also older which could offer a more stable framework with less code to debug and maybe more examples to offer. Nevertheless, such scenario is changing quickly.
 
-One important difference between Pytorch and TensorFlow is that in TensorFlow case you are first building an explicit graph and then running the graph many times. In Pytorch instead, you are building up a new graph every time you do a forward pass. This is one of the main distinguishing features between Pytorch and TensorFlow and this is called \emph{Static} vs \emph{Dynamic} computational graphs. This fact makes the code in Pytorch to look a bit cleaner in principle but it has other very important implications. For a very simple feed-forward neural network this issue does not make a huge difference, the code ends up looking very similar between the two frameworks and it runs in a similar way too. To talk a little bit about those two scenarios, in the static framework since the graph is built just once and then reused many times the framework may have the opportunity to do all kind of optimizations on the graph, i.e. fusing some operations, reordering some other operations, figuring out the most efficient way in which to operate the graph in order to make it really efficient. Since you are going to reuse the graph many times, that optimization process could be expensive at first but that cost could be amortized with the speedup you have gotten when you run the graph many times. As can be deduced, those kind of expensive optimizations could not be very well suited for dynamic graphs specially making reference to the natural approach of rebuilding the graph in each iteration. Another subtle point in terms of static vs dynamic is the idea of serialization. With static graphs once you build the graph you can have that data structure in memory which represents the complete structure of your network. Then you can take that data structure and just serialize it at the disk saving it in some file in order to reload it later to run such computational graph without access to the original code that built it. This could be kind of an advantage for a deployment scenario where you can train your network in Python because it is maybe easy to work with but then, after you serialized that network you can deploy it maybe in a \CC~scenario in which you will not need to use the original code that built the graph. In a dynamic graph scenario since you are interleaving those stages of graph building and graph execution you will end up needing the original code to reuse that model in the future.
 
-An advantage for dynamic graphs--on the other hand--is that this framework makes your code much cleaner and easier to comprehend. For example, inserting conditionals in the graph section of the code is very straightforward in Pytorch--exactly as it is in Numpy. In TensorFlow the situation is more complicated since you build the graph once and these control flow operations will need to be explicit operators in the graph. Since you build all the graph once all the potential paths from the control flow need to be dug into the graph at the time you construct it--before you ever run it. Then any control flow operation in TensorFlow cannot be a simple Python control flow operation. It will be necessary to use kind of special TensorFlow operations. As can be deduced, static graphs can also be very problematic in recursive loops were the input to the loop could vary its length a lot in each iteration. Summarizing, we end up having the sense that TensorFlow is almost building its own entire programming language, using the language of computational graphs. In this way, any kind of control flow operator needs to be rolled into the computational graph so you will end up learning a complete set of control flow operators--a new language. Finaly there actualy is a library called TensorFlow Fold that is another kind of layer on top of TensorFlow that lets you implement dynamic graphs.
 
-In reference to Caffe, this is different from the other \gls{dl} frameworks in which--in many cases--you can train networks without writing any code yourself. As a first step you will convert your data into some format such as LMDB. There are some scripts inside Caffe for that. Then you will need to define a text file (prototxt) which sets the structure of the computational graphs which is completely described in this text file. One downside of these files is that can be really ugly for very large networks. A ResNet with 152 layers results in a prototxt file with 6775 lines. Obviously, people are not writing it by hand and they are writing Python scripts to generate these prototxt files which means that they are running into their own computational graph structure which ends up not being a really good idea. Instead of having some optimizer objects Caffe has some kind of solver which defines the learning rate, the optimization algorithm to use, etc. Finaly, once you have done all those things you can run the Caffe binary with a \texttt{train} command and all happens magically. As a general evaluation Caffe could be good for feedforward models, is good for production scenarios since it does not depend on Python. Nevertheless Caffe is not being used for research very much, but it is pretty commonly used in industry or production. In reference to Caffe2, it is a successor from Caffe from Facebook that uses static graphs as TensorFlow which prevents you from writing those scripts in order to generate prototxt files. In Caffe2 you can define your computational graph structures all in Python using an \gls{api} that looks like TensorFlow but you can serialize this computational graph structure to a prototxt file. So you do not need the original training code in order to deploy a trained model.
 
-One last interesting thing is the way in which companies approach the development of those frameworks. Google tends to have one major \gls{dl} framework which is TensorFlow while Facebook has two which are Pytorch and Caffe2. These are different philosophies, on the one hand, Google tries to build one framework to rule them all and which maybe works for every possible scenario for \gls{dl}. This philosophy is good because it is consolidating all efforts onto one framework that works on many different scenarios--including distributed systems, production, deployment, mobile, research, etc--and prevents people from learning many languages since there is just one framework for everything. On the other hand, Facebook is taking a different approach where Pytorch is really more geared towards research since in terms of writing research code and quickly iterating through ideas is super easy in Pytorch but for things like running in production or in mobile devices Pytorch does not have a lot of great support. Instead Caffe2 is kind of geared towards those more production oriented use cases. 
+
+
+
+
+
+
+
+
+
+
+
+%\section{Literature Review}
+
+%To understand how phonetic categories and word-like units are acquired, several computational theories have been developed \cite{rasanen_2012}. In the context of such theories, the main idea has been to explain relevant aspects of phonetic acquisition by means of human engineered features. Nevertheless, \emph{lack of invariance} phenomenon in speech perception \cite{appelbaum_1996} seems to be one of those scientific problems which cannot be solved by spontaneous human reasoning, given the immense amount of interrelated variables involved in phonetic categorization processes. In that sense, \emph{deep learning} architectures--as a subfield inside of \emph{representation learning}--have shown unprecedented performance in the assistance of conventional machine learning techniques, which for decades  required careful engineering in order to reach an effective feature extraction design \cite{lecun_2015}.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%\subsection{\glspl{cpu} vs. \glspl{gpu} for \gls{ai} applications}
+
+%\glspl{cpu} pipeline their instructions to the extreme in order to keep all the datapath in the chip busy. Superscalar designs in \glspl{cpu} allow each processor to actually have multiple datapaths, in this way multiple instructions can be exectuted simultaneously, one in each datapath. It is not uncommon for a superscalar \gls{cpu} to have multiple \glspl{alu} and \glspl{fpu}, for each datapath. Vector processors, or \gls{simd} processors--which are a more specific variant of superscalar architectures--have specialized hardware for performing vector operations such as vector addition, vector multiplication, and other operations. Vector processors perform an instruction on all data elements of a vector or  array simultaneously--in parallel. In a superscalar or similar processor design, there are multiple execution units that can be used to process pieces of data simultaneously. However, these execution units are not always used at the same time, and some processing power is lost. It is possible to feed instructions to all the execution units by taking the instructions out of their original order. \gls{oooe} is a mechanism that a processor has for executing instructions out of their original order, in an attempt to do more work in parallel and execute programs faster. Hyperthreading is the name for a technology developed by Intel which works by duplicating some architectural components of the processor, such as the status flags, the control registers, and the general purpose registers. Hyperthreading does not, however, duplicate any of the execution units. In a hyperthreaded system, it appears to the operating system that there are two or more separate processors, when there is only one processor. The \gls{oooe} engine feeds instructions from multiple separate execution threads to the execution cores, in an atempt to keep all of the cores simultaneously busy. In general hyperthreading increases performance, although in some cases this additional complexity could actually ending up decreasing it. Taking the idea of superscalar operations to the next level, companies put multiple microprocessor cores onto a single chip and make the cores run in parallel.
+
+%Modern \glspl{gpu} are highly parallel programmable processors which reach peak arithmetic and memory bandwidth that could substantially outpace its \gls{cpu} counterparts for some specific tasks. Programmable units in a \gls{gpu} follow a \gls{spmd} programming model. For efficiency, the \gls{gpu} processes many elements (vertices or fragments in an image for example) in parallel using the same program. Each element is independent from the other elements, and in the base programming model, elements cannot communicate with each other. All \gls{gpu} programs must be structured in this way: many parallel elements, each processed in parallel by a single program. A code written in this manner is considered \gls{simd}.
+
+%\glspl{gpgpu} is a methodology for \gls{hpc} that uses graphics processing units to process data. The characteristics of graphics algorithms that have enabled the development of extremely high-performance special purpose graphics processors are obviously useful for other \gls{hpc} algorithms. This same special-purpose hardware approach can be used to accelerate those algorithms as well. Algorithms well-suited to \gls{gpgpu} implementation are those that are data parallel and throughput intensive. On the one hand, data parallel allows a processor execute the operation on different data elements simultaneously. On the other hand, throughput intensive comes from the fact that the algorithm is going to process many of data elements, in this way there will be plenty to operate in parallel. Taking advantage of these two properties, \glspl{gpu} achieve extreme performance by incorporating lots of relatively simple processing units to operate on many data elements simultaneously.
+
+%Pixel-based applications such as computer vision and video and image processing are very well suited to \gls{gpgpu} technology. From its origins, \glspl{gpu} computational requirements were centered in real-time rendering which requires billions of pixels per second, and each pixel requires hundreds or more operations. \glspl{gpu} must deliver an enormous amount of compute performance to satisfy the demand of complex real-time applications. In this manner, throughput ended up being more important than latency. \gls{gpu} implementations prioritize throughput over latency because the human visual system operates on millisecond time scales, while operations within a modern processor take nanoseconds. This six-order-of-magnitude gap between such operations leads to the important conclusion that the latency of any individual operation is unimportant on such applications.
+
+%Architecturally speaking, \glspl{cpu} tend to have a smaller number of cores than \glspl{gpu} but with lots of cache memory that can handle a relatively small number of software threads at a time. In contrast, \glspl{gpu} have more cores than \glspl{cpu} and can handle thousands of threads simultaneously thanks to the fact that \glspl{gpu} take their superscalar (vector) architecture to the extreme. Nevertheless, each thread in a \gls{gpu} does not have a so complex low latency cache memory hierarchy system as \glspl{cpu} do have. A comparison between 2 high end computing devices is shown in Table \ref{CPU_GPU_Comparison}. 
+
+%\begin{table}[h!]
+%\centering
+%\caption{High end \gls{cpu} vs. \gls{gpu} comparison}
+%\begin{tabular}{|l|l|l|}
+%\hline
+                     %& Intel® Xeon® Processor E7-8894 v4 & NVIDIA® Tesla™ P100 GPU \\ \hline
+%Number of Cores      & 24 Hyper-Threading Cores          & 56 Streaming Multiprocessors   \\ \hline
+%Number of Threads    & 48 Threads                        & 3584 CUDA Cores    \\ \hline
+%Max Memory Bandwidth & 85 GB/s                           & 732 GB/s                \\ \hline
+%Price                & 9K                                & 7K                      \\ \hline
+%\end{tabular}
+%\label{CPU_GPU_Comparison}
+%\end{table}
+
+%As can be seen in the table, there is a very important parameter that matters to most of the applications on \gls{hpc}. This parameter is the available memory bandwidth between the processors and the pull of memory in the device. Trying to ignore any other specification we can concentrate on this factor of about 9 units of the \gls{gpu} outperforming the \gls{cpu} in terms of memory bandwidth. Based on this factor now we can calibrate our expectations and see if it is really convenient to adapt our code to run on \gls{gpu} devices in order to get a speed improvement factor of--at best--9. Yet, such factor of 9 comes from peak bandwidths and it is very difficult to achieve peak bandwidths, instead only a fraction of those peaks is generally achievable. From a theoretical perspective it will be always easier to be closer to a \gls{cpu} peak bandwidth than to a \gls{gpu} peak bandwidth taking into account the cache hierarchy present on \glspl{cpu}. In fact, general experience shows that a fraction of 50 to 60 percent approximation is really achievable to the peak bandwidth on \glspl{gpu} \cite{}. On these circumstances, we can aspire to a factor of just 5 in the speed increase of our code by running it on \gls{gpu} devices in comparison to \glspl{cpu}.
+
+%The \gls{cpu} has 24 hyper-threading cores while the \gls{gpu} has 56 streaming multiprocessors which can be taken as equivalent to \gls{cpu} cores. Even though NVIDIA claims 3584 \gls{cuda} cores in front of just 48 threads from Intel, the truth is that \gls{cuda} cores can not be directly compared to \glspl{cpu} threads. The complex cache memory system present in \glspl{cpu} provides \gls{cpu} threads with a powerful independence no achievable for \gls{gpu} cores. The complexity of \gls{cpu} instructions enable \gls{cpu} threads to do quite a lot in an extremely independent way. On the other hand, even when  3584 \gls{gpu} cores could be seen as astronomic next to the 48 threads available in a \gls{cpu}, they run at a much lower clock speed and do not have the independence \gls{cpu} threads do have.
+
+%Recapitulating we can say that original design goals on \glspl{cpu} were mainly directed towards making single threads very fast by means of reducing latency through large cache systems and speculative execution including branch and memory dependence prediction in pipelined processors. In contrast, for \glspl{gpu} throughput matters more than single threads, hiding memory latency through massive parallelism and avoiding in this way the high frequency clock speeds present in \glspl{cpu}. In Fig.~\ref{fig:CPU_to_GPU_metamorphosis} it can be seen the metamorphosis process of ideas in order to get to the current \gls{gpu} architecture from \glspl{cpu}.
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.8\textwidth]{CPU_to_GPU_metamorphosis.png}
+    %\caption{\gls{cpu} to \gls{gpu} metamorphosis. The first big idea that differentiates the \gls{cpu} in (A) from the \gls{gpu} in (B) is to slim down the footprint of each core removing all the units that help a single instruction to execute fast by getting rid of great part of the data path administration. Then since each simplified core takes less space it could be doubled up as in (C). Yet since in each pixel the program do the same sequence of operations, then \gls{gpu} rendering instructions streams are typically very similar and it is convenient to take superscalar strategy from \glspl{cpu} to the extreme in \glspl{gpu} (from D to E). In this way the \gls{gpu} ends up having one Instruction Fetch/Decode unit feeding for example 8 \glspl{alu}. This is the \gls{simd} model which shares the cost of the instruction streams across many \glspl{alu}. Finally each \gls{simd} group has to be provisioned with shared memory which has to keep a different context for each \gls{alu} operation as shown in (F). And since these are light weight cores then they can be massively allocated in a \gls{gpu} (G). \gls{cpu} cores do not have as many registers as the \gls{gpu} cores. As an example an Skylake core has 180 integer registers and 168 floating point registers while a Maxwell core has about 16k registers.}
+    %\label{fig:CPU_to_GPU_metamorphosis}
+%\end{figure}
+
+%Essentially, every operation on a \gls{gpu} is parallel. On a \gls{cpu} instead, the compiler has to actually be persuaded that an operation can be vectorized. In order to do that, the operation on the \gls{cpu} has to satisfy some criteria, for example, the data used for the operation has to be aligned in memory in a certain way. That is a pretty big restriction. At the core level every operation on a \gls{gpu} is vectorized, there is no alternative. There is no need of persuading the compiler on order to make vector operations on a \gls{gpu}. Then each \gls{cpu} core executes scalar or vector operations while each \gls{gpu} core only executes vector instructions. 
+
+%As a final aside note that matters for \gls{gpu} market and its relationship to \gls{dl} applications, NVIDIA--unlike AMD--has been pushing a lot in the last years for \gls{dl}. A lot of engineering effort has been invested by NVIDIA to make their hardware better suited for \gls{dl}. As an example of that we can cite the last Volta tensor cores which can do an $A*B+C$ 4 by 4 matrix operation completely in parallel. As a result NVIDIA is pretty dominant in \gls{dl} currently.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%\subsection{Software approaches for \gls{dl} applications}
+
+%In reference to general purpose software tools which could be utilized for \gls{dl}, \gls{cuda} is a parallel computing platform and \gls{api} model created by NVIDIA. By means of \gls{cuda} developers can write code that looks like C but executes directly on \glspl{gpu}. Nevertheless,  writing \gls{cuda} code could end up being a real challenge, since it is very difficult to get a code with good performance, i.e. a code that takes the maximum advantage from all the \glspl{gpu}. Memory hierarchy has to be carefully managed trying to avoid cache mises and branch mispredictions. Then it is actually really hard to write performant \gls{cuda} code. As a result NVIDIA has released many libraries that implement common computational primitives which are highly optimized for \glspl{gpu}. Among such libraries, cuBLAS is an implementation of \gls{blas} on top of the NVIDIA \gls{cuda} runtime. It allows the user to access the computational resources of NVIDIA \gls{gpu}. Another library is cuFFT which is the NVIDIA \gls{cuda} \gls{fft} product. Such libraries are super optimized and run very well on \glspl{gpu}  getting very close to theoretical peak hardware specifications. Another \gls{gpu}-accelerated library is cuDNN which has primitives for deep neural networks. cuDNN provides highly tuned implementations for standard routines such as forward and backward convolution, pooling, normalization, and activation layers. So, in practice nobody tends to write his own \gls{cuda} code, instead everybody will typically be just mostly calling into extremely optimized software that other people have already written.
+
+%There is another language called \gls{opencl} which is a framework for writing programs that execute across heterogeneous platforms consisting of \glspl{cpu}, \glspl{gpu}, \glspl{dsp},  \glspl{fpga} and other processors or hardware accelerators. Yet, nobody has really spent a great effort trying to get optimized \gls{dl} primitives for this \gls{api}. As a result \gls{opencl} tends to be considerably less performant than the super optimized libraries in \gls{cuda}.
+
+%Referring to \gls{dl} frameworks more specifically, the landscape of those frameworks is very dynamic and great changes can be seen year after year. The first generation of \gls{dl} frameworks--which had wide adoption in the scientific community--was built mainly in academia. \gls{caffe} was from Berkeley, Torch was developed originally in \gls{nyu} in collaboration with Facebook and Theano was mostly built at University of Montreal. Yet, the next generation of \gls{dl} frameworks all originated in industry, \gls{caffe}2 and Pytorch are from Facebook while TensorFlow is from Google. It is an interesting shift in the landscape given in the last couple of years (Fig.~\ref{fig:ML_Frameworks}).
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.35\textwidth]{ML_Frameworks.png}
+    %\caption{Interesting shift from Academia to Industry given in the last couple of years in the development of \gls{dl} frameworks.}
+    %\label{fig:ML_Frameworks}
+%\end{figure}
+
+%Whenever working on \gls{dl}, there is an important concept called \emph{computational graph} which computes all the functions to be run in the model. In the case of a linear classifier for example, certain data $x$ is combined with certain weights $W$ on the network using a matrix multiplier, there will be a computation of some kind of \emph{hinge loss} and a regularization computation too. Sticking together all these different operations emerges the graph structure of the network to be implemented. These graph structures can be pretty complex especially in the case of big \glspl{nn} with many different layers, many different operations and with many different weights spread throughout the network. Hence, the point of \gls{dl} frameworks is really simple. There are three main reasons that could lead to the use of one of those frameworks rather than just writing the code from scratch. 
+
+%\begin{itemize}
+	%\item The first reason is that these frameworks enable to easily deal and work with these big computational graphs without worrying about all those bookkeeping details.
+	%\item The second reason is that whenever working in \gls{dl} it will be always necessary to compute gradients, i.e. to compute some loss and then to compute the gradients about weights with respect to the loss. It would be better to make these operations as automated as possible. After all, nobody wants to struggle writing such code. Everyone wants the framework to handle all these backpropagation details. So the common scenario is writing only the forward pass of the network and having the backward pass sort of free without any significant addition to the code.
+	%\item And finally it is desirable to have all this stuff running efficiently on \glspl{gpu} so nobody have to worry to much about those low level hardware details such as cuBLAS and cuDNN in \gls{cuda}, moving data between the \gls{cpu} and the \gls{gpu}, etc. Everybody can keep all those messy details hidden by these tools which take care of them.
+%\end{itemize}
+
+%Suppose you want to execute a simple computational graph, one having some kind of matrix multiplications and additions. Using Numpy it is extremely simple, but suppose that you want to compute the gradients of a scalar output from the graph with respect to the input vectors. If you are working in Numpy you need to write this backward pass yourself. It can be kind of a pain and a little bit annoying and messy once you get really big and complicated graphs. The other problem with Numpy is that it does not run on \glspl{gpu}, i.e. Numpy is definitely \gls{cpu} only and you are never going to be able to experience or take advantage of these \glspl{gpu} accelerated speedups if you keep working in only Numpy. The goal of most \gls{dl} frameworks these days is to let you write code in the forward pass that looks very similar to Numpy, but letting to run it on \glspl{gpu} and automatically compute all the gradients. That is kind of the picture goal of most of these frameworks. So the general pattern in these frameworks is that you will have to define the variables initializing them and write the forward pass in a very similar fashion to Numpy, in the case of Pytorch the forward pass will be exactly the same than in Numpy. Then using a magic single line of code you will be able to compute all the gradients. The area of variable initialization is where an extremely simple tweak will allow you to cast your variables in order to instruct the compiler to run the code on \glspl{gpu}. In this way the frameworks solve two problems, first you are running your code transparently on \glspl{gpu} and second you are having the frameworks compute all the gradients automatically for you. So for example you will end up having a code written in TensorFlow or Pytorch which looks almost exactly the same than Numpy, which is great because Numpy is a beautiful \gls{api} and is really easy to work with, but you can also compute gradients automatically and you can run on \glspl{gpu} automatically too. 
+
+%The prototypical programing paradigm in TensorFlow is to divide the code into two major stages. First some code is devoted to define the computational graph and then, after the graph is defined, another code will run such graph over and over again feeding data into it in order to perform the necessary computations for the network. This is kind of the big common pattern in TensorFlow. First a bunch of code builds the graph and then another code run the graph reusing it many times. In the section that build the graph, firstly some variables are defined. For example some sets of vectors $x$s for the inputs and the intermediate outputs in the network and a some sets of $w$s for the different weights. In TensorFlow, \texttt{placeholder} and \texttt{Variable} objects are going to be the input nodes to the graph. They are like entry points where the graph is run feeding in data and putting them into these input slots.
+
+%When a placeholder or a Variable is defined, they are not allocated in memory. They are just defining those input slots in the graph. The difference between a placeholder and a Variable is the memory in which they will be allocated once the graph is run. In the case of a placeholder the consecutive runs will end up copying data back and forth between the \gls{cpu} and the \gls{gpu} in every time step. These objects are generally used to feed the networks with the input and the labels. A Variable on the other hand is a value that lives inside the computational graph--in \gls{gpu} memory--and will persist inside the graph across different time steps when such graph is run. These objects are generally used to store the weights of the network. Since all Variable data lives inside the computational graph, their initialization and update has to be specified inside the graph too in order to avoid great volumes of data movement between the \gls{cpu} and the \gls{gpu}. Those input slots--which are like symbolic variables--are going to be used to perform different TensorFlow operations. It is important to know that such lines of code are not actually computing anything, there is no data in the system since such code is just building up this computational graph data structure telling TensorFlow how is the structure of the network and which operations will be run once real data is put inside the graph. After the loss is computed, TensorFlow is generally instructed to compute all the gradients of the loss with respect to the weights $w$s in the graph using a single line of code. In all this configuration there is no actual computation happening, this is just sort of adding extra operations to the computational graph structure in memory which knows which operations has to be performed once the graph is run.
+
+%The next section of the code enters in a TensorFlow session that runs the computational graph and feed it with data. TensorFlow just expects to receive data from Numpy arrays in most cases. Then the different variables are stored in a dictionary and the graph is run with a special function of the session in which the user can specify which part of the graph actually wants as output. TensorFlow offers a lot of tools to make the programmer's life easier, from optimizers to run the complete graph even when it is only necessary to compute some intermediated value--TensorFlow is intelligent enough to implement only the necessary sections of the graph based in the outputs asked by the user--to tools to automate the computation of losses and higher level libraries to handle a lot of details to implement weights configurations of the different layers and activation functions. These libraries manage a lot of architectural details of the graph implementation.
+
+%There are many different higher level libraries that programmers build on top of TensorFlow. When working with higher level abstractions such as neural networks some abstract concepts like layers and weights could result really messy and inconvenient in a row computational graph without the use of some wrappers. So there are several packages to help to make the code stile cleaner. There are very popular packages such as Keras which is an open source neural network library written in Python and is capable of running on top of TensorFlow, Microsoft Cognitive Toolkit, or Theano. Keras is designed to enable fast experimentation with deep neural networks and focuses on being user-friendly, modular, and extensible. Keras builds all these computational graphs in the backend. It is important to take into account that there are a great variety of wrapper libraries which work on top of TensorFlow and that even people within Google cannot agree in which one is the right to be used. Tensorflow has also a distributed version which allows programmers to split one graph over multiple machines. As a side note, a lot in the design of TensorFlow is inspired in an earlier framework called Theano from University of Montreal. Generally speaking, the code from a Theano program ends up looking very similar to code in TensorFlow.
+
+%In reference to Pytorch, it is different from TensorFlow. There are three explicit different layers of abstraction inside Pytorch. Pytorch has an object called Tensor, which is just like a Numpy array, it is a imperative \texttt{ndarray} and does not know anything about \gls{dl} but it can run on \glspl{gpu}. Another object is the Variable object which is a node in a computational graph and builds up computational graphs, enables the use of gradients, etc. Finally, Pytorch also offers Module objects which are neural network layers which can store state or learnable weights and can be used to compose big networks in a modular way. Fig.~\ref{fig:Pytorch_TensorFlow} shows a simplified equivalence between Pytorch and TensorFlow in terms of the objects and libraries each tool utilizes.
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.5\textwidth]{Pytorch_TensorFlow.png}
+    %\caption{Row equivalence between Pytorch and TensorFlow objects and libraries.}
+    %\label{fig:Pytorch_TensorFlow}
+%\end{figure}
+
+%As can be seen in the figure, Pytorch is very simple and has less choices involved, which is better in some way since the user does not have to worry about--for example--which higher level wrapper to use. The major difference between Pytorch Tensors and Numpy arrays is that Pytorch Tensors run on \glspl{gpu}. Then having a code that is completely written in Numpy the programmer can make this code running on \glspl{gpu} simply by casting all the Numpy arrays to a different data type by means of just a single line of code. So Pytorch Tensors are Numpy arrays plus \glspl{gpu}, nothing specific to \gls{dl}. The next level of abstraction in Pytorch is the Variable. Moving from Tensors to Variables enables the built of computational graphs which are able to take gradients automatically. Then if \texttt{x} is a Variable, \texttt{x.data} is a Tensor and \texttt{x.grad} is another Variable containing the gradients of the loss with respect to that Tensor in a way that \texttt{x.grad.data} is a Tensor containing those gradients. Pytorch Tensors and Variables have the same \gls{api}, so in any code that works on Pytorch Tensors such Tensors can be casted to Variables and run exactly the same code but in this case the code is running a computational graph rather than just running this imperative operations. So the code ends of looking quite like the Numpy case except that all the gradients come for free.
+
+%In Pytorch you can define new autograd functions writing a class with forward and backward functions in terms of Tensors but most of the time you will probably not need to define your own autograd operations since such operations will be already implemented for you. In TensorFlow you can move to something like Keras or TFLearn which give you a higher level \gls{api} to work with rather than has to deal with those row computational graphs. In a similar way in Pytorch you will use the nn package which provides high level for working with layers and weights in networks. Like TensorFlow, Pytorch also has optimizers that--after computing the gradients--optimize all the parameters of the model for you. In Pytorch you will also define your nn Modules where a Module is kind of a neural network layer that can contain either other Modules or trainable weights. The characteristic scenario in Pytorch is defining your own class, defining your model that contains other Modules or not and then you will have some explicit training loop that updates the parameters of the model. One nice quality feature that is offered by Pytorch are DataLoaders. A DataLoader can handle data providing minibatching, shuffling, multithreading, etc for you. This tool can actually use multiple threads in the background to build minibatches offering a continuoum stream input data from disk. As an aside note Pytorch is kind of a newer updated version of an older framework called Torch. Pytorch is pretty much better in a lot of ways than Torch but they actually share a lot of the backend core for computing the Tensors and \gls{gpu} operations on Tensors. Some of the high level differences between Pytorch and Torch is that while Torch is based in Lua Pytorch is obviously based on Python and learning Lua could be kind of a turn off for some people, Torch does not have Autograd, but Torch is also older which could offer a more stable framework with less code to debug and maybe more examples to offer. Nevertheless, such scenario is changing quickly.
+
+%One important difference between Pytorch and TensorFlow is that in TensorFlow case you are first building an explicit graph and then running the graph many times. In Pytorch instead, you are building up a new graph every time you do a forward pass. This is one of the main distinguishing features between Pytorch and TensorFlow and this is called \emph{Static} vs \emph{Dynamic} computational graphs. This fact makes the code in Pytorch to look a bit cleaner in principle but it has other very important implications. For a very simple feed-forward neural network this issue does not make a huge difference, the code ends up looking very similar between the two frameworks and it runs in a similar way too. To talk a little bit about those two scenarios, in the static framework since the graph is built just once and then reused many times the framework may have the opportunity to do all kind of optimizations on the graph, i.e. fusing some operations, reordering some other operations, figuring out the most efficient way in which to operate the graph in order to make it really efficient. Since you are going to reuse the graph many times, that optimization process could be expensive at first but that cost could be amortized with the speedup you have gotten when you run the graph many times. As can be deduced, those kind of expensive optimizations could not be very well suited for dynamic graphs specially making reference to the natural approach of rebuilding the graph in each iteration. Another subtle point in terms of static vs dynamic is the idea of serialization. With static graphs once you build the graph you can have that data structure in memory which represents the complete structure of your network. Then you can take that data structure and just serialize it at the disk saving it in some file in order to reload it later to run such computational graph without access to the original code that built it. This could be kind of an advantage for a deployment scenario where you can train your network in Python because it is maybe easy to work with but then, after you serialized that network you can deploy it maybe in a \CC~scenario in which you will not need to use the original code that built the graph. In a dynamic graph scenario since you are interleaving those stages of graph building and graph execution you will end up needing the original code to reuse that model in the future.
+
+%An advantage for dynamic graphs--on the other hand--is that this framework makes your code much cleaner and easier to comprehend. For example, inserting conditionals in the graph section of the code is very straightforward in Pytorch--exactly as it is in Numpy. In TensorFlow the situation is more complicated since you build the graph once and these control flow operations will need to be explicit operators in the graph. Since you build all the graph once all the potential paths from the control flow need to be dug into the graph at the time you construct it--before you ever run it. Then any control flow operation in TensorFlow cannot be a simple Python control flow operation. It will be necessary to use kind of special TensorFlow operations. As can be deduced, static graphs can also be very problematic in recursive loops were the input to the loop could vary its length a lot in each iteration. Summarizing, we end up having the sense that TensorFlow is almost building its own entire programming language, using the language of computational graphs. In this way, any kind of control flow operator needs to be rolled into the computational graph so you will end up learning a complete set of control flow operators--a new language. Finaly there actualy is a library called TensorFlow Fold that is another kind of layer on top of TensorFlow that lets you implement dynamic graphs.
+
+%In reference to Caffe, this is different from the other \gls{dl} frameworks in which--in many cases--you can train networks without writing any code yourself. As a first step you will convert your data into some format such as LMDB. There are some scripts inside Caffe for that. Then you will need to define a text file (prototxt) which sets the structure of the computational graphs which is completely described in this text file. One downside of these files is that can be really ugly for very large networks. A ResNet with 152 layers results in a prototxt file with 6775 lines. Obviously, people are not writing it by hand and they are writing Python scripts to generate these prototxt files which means that they are running into their own computational graph structure which ends up not being a really good idea. Instead of having some optimizer objects Caffe has some kind of solver which defines the learning rate, the optimization algorithm to use, etc. Finaly, once you have done all those things you can run the Caffe binary with a \texttt{train} command and all happens magically. As a general evaluation Caffe could be good for feedforward models, is good for production scenarios since it does not depend on Python. Nevertheless Caffe is not being used for research very much, but it is pretty commonly used in industry or production. In reference to Caffe2, it is a successor from Caffe from Facebook that uses static graphs as TensorFlow which prevents you from writing those scripts in order to generate prototxt files. In Caffe2 you can define your computational graph structures all in Python using an \gls{api} that looks like TensorFlow but you can serialize this computational graph structure to a prototxt file. So you do not need the original training code in order to deploy a trained model.
+
+%One last interesting thing is the way in which companies approach the development of those frameworks. Google tends to have one major \gls{dl} framework which is TensorFlow while Facebook has two which are Pytorch and Caffe2. These are different philosophies, on the one hand, Google tries to build one framework to rule them all and which maybe works for every possible scenario for \gls{dl}. This philosophy is good because it is consolidating all efforts onto one framework that works on many different scenarios--including distributed systems, production, deployment, mobile, research, etc--and prevents people from learning many languages since there is just one framework for everything. On the other hand, Facebook is taking a different approach where Pytorch is really more geared towards research since in terms of writing research code and quickly iterating through ideas is super easy in Pytorch but for things like running in production or in mobile devices Pytorch does not have a lot of great support. Instead Caffe2 is kind of geared towards those more production oriented use cases. 
 
 
 
@@ -445,14 +658,34 @@ One last interesting thing is the way in which companies approach the developmen
 
 %\subsection{Data Flow}
 
-Our \gls{cstm} simulates a patch of cortical tissue in the mammalian brain~\cite{dematties2018}. Fig. \ref{fig:DataFlow} shows the data flow of the information converging to the \glsfirst{el}--the main algorithm in this model. Sound waves are firstly processed by the \gls{mrstsa} algorithm. We followed the main guidelines in the implementation of the cortical section of Chi T. et al. \cite{chi_2005} model in order to implement the \gls{mrstsa} algorithm.
+Our \gls{cstm} simulates a patch of cortical tissue in the mammalian brain~\cite{Dematties2018}. Fig. \ref{fig:EncoderColumnConnections} shows the data flow of the information converging to a \gls{cc} inside the \glsfirst{el}--the main algorithm in this model. Sound waves are firstly processed by the \gls{mrstsa} algorithm. We followed the main guidelines in the implementation of the cortical section of Chi T. et al. \cite{chi_2005} model in order to implement the \gls{mrstsa} algorithm.
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.3\textwidth]{DataFlow.png}
-    \caption{Firstly, the \gls{mrstsa} processes the sound waves in a sequence of temporal windows and obtains a sequence of arrays of real numbers. Such sequence of arrays is received by the \gls{el} by means of proximal afferent connections. The \gls{el} also receives distal lateral connections which bring information from its self processing and distal apical connections which bring information from other cortical layers above the \gls{el}.}
-    \label{fig:DataFlow}
+    \includegraphics[width=0.6\textwidth]{EncoderColumnConnections.png}
+    \caption{\gls{cstm} representation with a connection scheme for a cortical column in the Encoder Layer.
+    Each cylinder in the \gls{el} and in the \gls{cl} represents a \gls{cc} in neural tissue.
+    Each prism in the \gls{mrstsa} represents a real valued variable.
+    This is a visualization of a \gls{cc} (in red) and its three receptive fields (in yellow).
+    The receptive field of a \gls{cc} is an array that defines a set of \glspl{cc}
+    with which such column could be connected.
+    The receptive field of a \gls{cc} on the \gls{mrstsa} determines an array of real valued variables
+    with which such column could be connected.
+    A subset of \glspl{cc} in a receptive field (in green) represents the \glspl{cc} that are really
+    connected with the \gls{cc} in red. A similar scenario could be described for the green prisms on
+    the \gls{mrstsa}.
+    The size, wrap-around property and percentage of established links (in green) inside a receptive field are tunable parameters for the model.
+    In this work, only lateral connections have been implemented since in the current implementation there are no upper cortical layers from which
+    to bring apical connections.}
+    \label{fig:EncoderColumnConnections}
 \end{figure}
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.3\textwidth]{DataFlow.png}
+    %\caption{Firstly, the \gls{mrstsa} processes the sound waves in a sequence of temporal windows and obtains a sequence of arrays of real numbers. Such sequence of arrays is received by the \gls{el} by means of proximal afferent connections. The \gls{el} also receives distal lateral connections which bring information from its self processing and distal apical connections which bring information from other cortical layers above the \gls{el}.}
+    %\label{fig:DataFlow}
+%\end{figure}
 
 %We simulate pyramidal cells with proximal connections from afferent dendritic branches and distal connections from lateral and apical dendritic branches (Fig. \ref{fig:Pyramidal_Cell}).
 
@@ -465,7 +698,7 @@ Our \gls{cstm} simulates a patch of cortical tissue in the mammalian brain~\cite
 
 The \gls{el} simulates a patch of cortical tissue using an n-dimensional array of complex structures called \glspl{csom} that simulate \glspl{cc} in the brain. The \gls{el} generates \glspl{sdr} \cite{ahmad_2016} from the inputs delivered by the \gls{mrstsa} stage and from the activation history in its own \glspl{cc}. 
 
-Each cell unit in a \gls{cc} has two types of dendritic branches; proximal and distal. Proximal and distal dendritic branches lead to proximal and distal connections in a cell unit respectively~\cite{dematties2018}. Neural units in the \gls{el} simulates pyramidal cells in cortical tissue in the brain (Fig \ref{fig:Pyramidal_Cell}). 
+Each cell unit in a \gls{cc} has two types of dendritic branches; proximal and distal. Proximal and distal dendritic branches lead to proximal and distal connections in a cell unit respectively~\cite{Dematties2018}. Neural units in the \gls{el} simulates pyramidal cells in cortical tissue in the brain (Fig \ref{fig:Pyramidal_Cell}). 
 
 \begin{figure}[h!]
     \centering
@@ -870,7 +1103,7 @@ We implemented our algorithms in the standard \CC14 using the \gls{oop} paradigm
     \label{fig:InheritanceComposition}
 \end{figure}
 
-The \glsfirst{ssom} class implements proximal connections, the \glsfirst{dsom} class implements distal connections and the \glsfirst{csom} class implements activation rules in a~\gls{cc}. Each class uses \gls{stl} vectors to store its data and \texttt{algorithm} \gls{stl} library to computationally operate through iterators or pointers on those vectors.
+The \glsfirst{ssom} class implements proximal connections, the \glsfirst{dsom} class implements distal connections and the \glsfirst{csom} class implements activation rules in a~\gls{cc} \cite{Dematties2018}. Each class uses \gls{stl} vectors to store its data and \texttt{<algorithm>} \gls{stl} library to computationally operate through iterators or pointers on those vectors.
 
 %The \glsfirst{ssom} class implements Alg. \ref{csom_proximal_synapses} explained in section \ref{proximal_dendrites}, the \glsfirst{dsom} class implements Alg. \ref{csom_distal_synapses} explained in section \ref{distal_dendrites} and the \glsfirst{csom} class implements Alg. \ref{csom_activation} explained in section \ref{activation_rules}. Each class uses \gls{stl} vectors to store its data and \texttt{algorithm} \gls{stl} library to computationally operate through iterators or pointers on those vectors.
 
@@ -905,7 +1138,7 @@ The \glsfirst{ssom} class implements proximal connections, the \glsfirst{dsom} c
 
 \subsubsection{\glsfirst{el} Parallelization}
 
-We parallelized the \gls{el} class by means of a hybrid \gls{mpi}+\gls{omp} paradigm. We distributed \glspl{csom} among \gls{mpi} ranks as a deck of cards is distributed among different players. Each \gls{mpi} rank ends up with one or more \glspl{csom} and the \glspl{csom} in each rank are distributed among different \gls{omp} threads (Fig. \ref{fig:EncoderParallelization} A and B respectively and Alg.~\ref{ccs_distribution}).
+We parallelized the \gls{el} class by means of a hybrid \gls{mpi}+\gls{omp} paradigm distributing \glspl{csom} among \gls{mpi} ranks as a deck of cards is distributed among different players. Each \gls{mpi} rank ends up with one or more \glspl{csom} and the \glspl{csom} in each rank are distributed among different \gls{omp} threads (Fig. \ref{fig:Encoder_Parallelization} and Alg.~\ref{ccs_distribution}).
 
 \begin{algorithm}
 	\caption{This algorithm distributes \glspl{cc} among \gls{mpi} processes in a distributed memory system and the \glspl{cc} in each process are distributed among \gls{omp} threads in a shared memory system. In this algorithm we run one \gls{mpi} process per compute node on Cooley.}
@@ -922,138 +1155,84 @@ We parallelized the \gls{el} class by means of a hybrid \gls{mpi}+\gls{omp} para
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.5\textwidth]{EncoderParallelization.png}
-    \caption{\glsfirst{el} \gls{mpi}+\gls{omp} parallelization. (A) Distribution of \gls{csom} objects in an \gls{el} with
-    3 by 8 (24) \glspl{cc} among three \gls{mpi} ranks with three \gls{omp} threads per rank.
-    Certain ranks could take care of a different number of
-    \glspl{csom} depending on the number of \gls{mpi} ranks as well as the number of \glspl{cc} in the \gls{el}.
-    (B) Each \gls{mpi} rank distributes its \glspl{csom} among different threads in the same fashion.
-    (C) \gls{mpi} \gls{ipc} among different ranks. \gls{ipc} is carried out at each time step since each \gls{mpi} rank 
-    requires the complete \gls{el} output at each time step.
-    Each \gls{mpi} rank broadcasts the information corresponding to its \glspl{cc} to the other ranks in the \gls{mpi}
-    environment.
-    (D) \gls{el} information distribution in a file to save its status.
-    Each \gls{mpi} rank puts the formated data corresponding to its \glspl{csom} in a \gls{stl} stringstream class template.
-    Rank 0 also takes care of the \gls{el} structure, connectivity and parameters.
-    Once each rank has its stringstream with the formated data, it communicates its file view to the other ranks.
-    Then each rank writes its stream of bytes in parallel without interfering with other ranks in the \gls{mpi} environment.
-    An \gls{el} with a different number of ranks can load the same file without affecting the final results.
-    Each rank in the new \gls{el} loads the complete file in a \gls{stl} stringstream class template and then takes the
-    informations that concern it from such structure.}
-    \label{fig:EncoderParallelization}
+    \includegraphics[width=0.5\textwidth]{Encoder_Parallelization.png}
+    \caption{\glsfirst{el} \gls{mpi}+\gls{omp} parallelization. Distribution of \gls{csom} objects in an \gls{el} with 3 by 8 (24) \glspl{cc} among three \gls{mpi} ranks with three \gls{omp} threads per rank. Certain ranks could take care of a different number of \glspl{csom} depending on the number of \gls{mpi} ranks as well as the number of \glspl{cc} in the \gls{el}. Each \gls{mpi} rank distributes its \glspl{csom} among different threads in the same fashion.}
+    \label{fig:Encoder_Parallelization}
 \end{figure}
 
-Information among \gls{mpi} ranks must be transferred in each time step. Basically all the information needed by each process is the identity of the active neural units in each \gls{cc} of the \gls{el}. We gather all the information corresponding to the \glspl{csom} in each rank and then use \gls{mpi} Bcast function to transmit such information using a special comunication protocol by means of which we specify the boundaries in the information corresponding to each \gls{csom}(Figs. \ref{fig:BCast} and \ref{fig:EncoderParallelization} C). By means of this strategy each \gls{mpi} rank has to call \gls{mpi} Bcast just once in order to transmit its data.
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.5\textwidth]{EncoderParallelization.png}
+    %\caption{\glsfirst{el} \gls{mpi}+\gls{omp} parallelization. (A) Distribution of \gls{csom} objects in an \gls{el} with
+    %3 by 8 (24) \glspl{cc} among three \gls{mpi} ranks with three \gls{omp} threads per rank.
+    %Certain ranks could take care of a different number of
+    %\glspl{csom} depending on the number of \gls{mpi} ranks as well as the number of \glspl{cc} in the \gls{el}.
+    %(B) Each \gls{mpi} rank distributes its \glspl{csom} among different threads in the same fashion.
+    %(C) \gls{mpi} \gls{ipc} among different ranks. \gls{ipc} is carried out at each time step since each \gls{mpi} rank 
+    %requires the complete \gls{el} output at each time step.
+    %Each \gls{mpi} rank broadcasts the information corresponding to its \glspl{cc} to the other ranks in the \gls{mpi}
+    %environment.
+    %(D) \gls{el} information distribution in a file to save its status.
+    %Each \gls{mpi} rank puts the formated data corresponding to its \glspl{csom} in a \gls{stl} stringstream class template.
+    %Rank 0 also takes care of the \gls{el} structure, connectivity and parameters.
+    %Once each rank has its stringstream with the formated data, it communicates its file view to the other ranks.
+    %Then each rank writes its stream of bytes in parallel without interfering with other ranks in the \gls{mpi} environment.
+    %An \gls{el} with a different number of ranks can load the same file without affecting the final results.
+    %Each rank in the new \gls{el} loads the complete file in a \gls{stl} stringstream class template and then takes the
+    %informations that concern it from such structure.}
+    %\label{fig:EncoderParallelization}
+%\end{figure}
+
+Information among \gls{mpi} ranks must be transferred in each time step. Basically all the information needed by each process is the identity of the active neural units in each \gls{cc} of the \gls{el}. We gather all the information corresponding to the \glspl{csom} in each rank and then use \gls{mpi} Bcast function to transmit such information using a special comunication protocol by means of which we specify the boundaries in the information corresponding to each \gls{csom}(Fig. \ref{fig:BCast}). By means of this strategy each \gls{mpi} rank has to call \gls{mpi} Bcast just once in order to transmit its data.
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.6\textwidth]{BCast.png}
-    \caption{Communication protocol to transmit information among \gls{mpi} ranks in the \gls{el}. All information is transmitted in two \gls{stl} vectors--\texttt{activeUnits} and \texttt{boundaries}. The vector \texttt{activeUnits} identifies the active neural units in the \glspl{cc} inside a \gls{mpi} rank and \texttt{boundaries} identifies the boundaries among active units that belong to different \glspl{cc}. There are $n+1$ active units in the \glspl{cc} managed by certain \gls{mpi} rank and there are $m+1$ \glspl{cc} managed by such \gls{mpi} rank.}
+    \caption{ \gls{mpi} \gls{ipc} among different ranks. \gls{ipc} is carried out at each time step since each \gls{mpi} rank requires the complete \gls{el} output at each time step. Each \gls{mpi} rank broadcasts the information corresponding to its \glspl{cc} to the other ranks in the \gls{mpi} environment. In the communication protocol to transmit information among \gls{mpi} ranks in the \gls{el} all the information is transmitted in two \gls{stl} vectors--\texttt{activeUnits} and \texttt{boundaries}. The vector \texttt{activeUnits} identifies the active neural units in the \glspl{cc} inside a \gls{mpi} rank and \texttt{boundaries} identifies the number of active units that belong to different \glspl{cc}. There are $n+1$ active units in the \glspl{cc} managed by certain \gls{mpi} rank and there are $m+1$ \glspl{cc} managed by such \gls{mpi} rank.}
     \label{fig:BCast}
 \end{figure}
 
-The \gls{el} uses \gls{mpi} I/O parallel file system to save its status in Matlab/Octave format (Fig. \ref{fig:EncoderParallelization} D). Each \gls{mpi} rank gathers all the data corresponding to its \glspl{csom} in the \gls{el} and puts such data--formated in Matlab/Octave--in a \texttt{std::stringstream} class. Then such \gls{mpi} rank communicates the part of the file it will use to the other \gls{mpi} ranks in order to store the data without interfering with the other ranks in the \gls{mpi} environment. Finally, each \gls{mpi} rank saves all its data with a unique call to \gls{mpi} Write using the complete \texttt{std::stringstream}.
-
-In response to biological plausibility demands for future simulations of this model, our computational approach is intended to be applied in leadership supercomputers. In this work an essential step is to test our code in order to see how it uses the resources provided by Cooley Nodes.
-
-Parallel scalability is a measurement that indicates how efficient is our code when using increasing numbers of parallel processing elements--Nodes or Processes and \glspl{cpu} or Threads on Cooley. Fig. \ref{fig:Strong_Weak} shows the scaling capacity of our code in terms of run time vs. number of processing elements used for the task. In these tests we constrained the code to run one \gls{mpi} rank per Cooley node. Each \gls{mpi} rank spreads an specific number of threads through the different \glspl{cpu} in its corresponding node (Fig. \ref{fig:EncoderParallelization} A and B).
+The \gls{el} uses \gls{mpi} I/O parallel file system to save its status in Matlab/Octave format (Fig. \ref{fig:MPI_IO}). Each \gls{mpi} rank gathers all the data corresponding to its \glspl{csom} in the \gls{el} and puts such data--formated in Matlab/Octave--in a \texttt{std::stringstream} class. Then such \gls{mpi} rank communicates the part of the file it will use to the other \gls{mpi} ranks in order to store the data without interfering with the other ranks in the \gls{mpi} environment. Finally, each \gls{mpi} rank saves all its data with a unique call to \gls{mpi} Write using the complete \texttt{std::stringstream}.
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=1.0\textwidth]{Strong_Weak.png}
-    \caption{Strong and Weak scaling tests on Cooley nodes. Left: Strong scaling. Run time vs. the number of nodes for different number of threads per node. The problem size stays fixed but the number of processing elements are increased. Right: Weak scaling. Run time vs. the number of nodes for 8 threads per node. In this case the problem workload assigned to each processing element stays constant and additional elements are used to solve a larger total problem (i.e. a problem that would not fit in the available RAM on a single node).}
-    \label{fig:Strong_Weak}
+    \includegraphics[width=0.5\textwidth]{MPI_IO.png}
+    \caption{\gls{el} information distribution in a file to save its status. Each \gls{mpi} rank puts the formated data corresponding to its \glspl{csom} in a \gls{stl} \texttt{stringstream} class template. Rank 0 also takes care of the \gls{el} structure, connectivity and parameters. Once each rank has its \texttt{stringstream} with the formated data, it communicates its file view to the other ranks. Then each rank writes its stream of bytes in parallel without interfering with other ranks in the \gls{mpi} environment. An \gls{el} with a different number of ranks can load the same file without affecting the final results. Each rank in the new \gls{el} loads the complete file in a \gls{stl} \texttt{stringstream} class template and then takes the informations that concern it from such structure.}
+    \label{fig:MPI_IO}
 \end{figure}
 
-There are two ways to measure the parallel performance of a given application. The measure to be applied will depend on whether the application is \gls{cpu}-bound or memory-bound. Such measurements are referred to as \emph{strong} and \emph{weak} scaling, respectively.
-
-Straight lines in Fig. \ref{fig:Strong_Weak} (left) show an initially good strong scalability of our code while the small slope exhibited by Fig. \ref{fig:Strong_Weak} (right) allows us to foresee a good weak scaling performance of our code in high end leadership supercomputers.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\subsection{Corpora Generation Implementation}
-\label{CorpGenImp}
-
-%We generate a corpora of 500 words with mono, di and trisyllabic randomly chosen English words with vocabularies of five words using \gls{festival} Synthesis \cite{festival2014}.
-
-%\begin{itemize}
-	%\item Monosyllabic vocabulary: \textit{map, dog, mouse, with, truck.} % and \textit{truck}.
-	%\item Disyllabic vocabulary: \textit{answer, doctor, teacher, summer, tennis.}  %and \textit{tennis}.
-	%\item Trisyllabic vocabulary: \textit{computer, telephone, rectangle, tomato, magazine.} % and \textit{magazine}.
-%\end{itemize}
-
-%We generate a cross synthesizer standard mark up language file with SABLE \cite{sable}. In this file, we instruct \gls{festival} to generate a corpus with 500 words from a vocabulary of 5 words uttered by 10 different voices (8 males and 2 females) available from the synthesizer. The organization of the corpus has certain rules and restrictions in order to avoid biases in the training processes. The voices are sequentially chosen (pseudo-randomly) with the restriction that no voice could utter a second time until all the voices had uttered in their turns. Every voice utters two words per turn--in pseudo-random order--and no word is not be repeated until all the words are used by such voice. We use the following English speaking voices provided by Festival: \texttt{cmu\_us\_fem\_cg, cmu\_us\_gka\_cg, cmu\_us\_ksp\_cg, cmu\_us\_rxr\_cg, cmu\_us\_jmk\_cg, cmu\_us\_rms\_cg, cmu\_us\_slt\_cg, cmu\_us\_jmk\_arctic\_clunits, cmu\_us\_rms\_arctic\_clunits, cmu\_us\_slt\_arctic\_clunits}.
-
-%Every word in the audio file is followed by a silence gap whose time is equivalent to the uttering time of the monosyllabic word \textit{cat}, uttered by the same voice used for the last word. We use the \texttt{text2wave} program provided by Festival in order to generate a \texttt{wav} file from the SABLE file.
-
-We generate corpora with randomly chosen English mono and multisyllabic words using \gls{festival} Synthesis \cite{festival2014}. To that end, we generate cross synthesizer standard mark up language SABLE \cite{sable} files. In those files, we instruct \gls{festival} to generate audio \texttt{wav} files with the corpora uttered by different voices available from the synthesizer.
-
-All the code that generates the corpora is implemented in Python and parallelized by means of a \gls{mpi} for Python package called \texttt{mpi4py}. The algorithmic implementation of this parallelization is shown in Alg.~\ref{corpora_generation_parallelization} and Fig.~\ref{fig:CorporaGenerationParallelization}.
-
-\begin{algorithm}
-	\caption{This algorithm distributes vocabularies among \gls{mpi} processes. In this algorithm we run one \gls{mpi} process per \gls{cpu} on Cooley.}
-\label{corpora_generation_parallelization}
-\begin{algorithmic}[1]
-	\STATE {\texttt{numberOfProcesses} = getNumberOfProcesses()}
-	\STATE {\texttt{processNumber} = getProcessNumber()}
-	\FOR{\texttt{vocabulary} = 0 \TO \texttt{vocabulary} = \texttt{numberOfVocabularies}}
-		\IF{\texttt{corpus}\%\texttt{numberOfProcesses}==\texttt{processNumber}}
-			\FOR{\texttt{corpus} = 0 \TO \texttt{corpus} = \texttt{numberOfCorpora}}
-				\STATE {Call \gls{festival} to generate an audio file from this \texttt{corpus} from this \texttt{vocabulary}...}
-			\ENDFOR
-		\ENDIF
-	\ENDFOR
-\end{algorithmic}
-\end{algorithm}
+In this work, each \gls{mpi} rank runs in a diferent Cooley node and keeps all the data that corresponds to the \gls{el} object, such as \gls{el} dimensionality, receptive fields for each \gls{cc}, percentages of real connections in each receptive field for each \gls{cc}, population dimensionalities for the \glspl{cc} as well as the complete connectivity of each \gls{cc} and all the general parameters of the model such as learning rates, learning neighborhoods, etc~\cite{Dematties2018}. Although this general \gls{el} data is replicated in each \gls{mpi} rank this is not significant compared to the data corresponding to the \glspl{csom} objects. Each \gls{mpi} rank keeps only the data for those \glspl{csom} which are under its charge. Fig. \ref{fig:EL_ALG} depicts the general layout that follows the \gls{el} algorithm.
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.4\textwidth]{CorporaGenerationParallelization.png}
-    \caption{Distribution of corpora generation among Python \gls{mpi} ranks. The corpora generation tasks are distributed among Python \gls{mpi} ranks as a deck of cards is distributed among players. Each \gls{mpi} rank will end up with a set of vocabularies to generate the corpora corresponding to such vocabularies (i.e. if we have 10 corpora per vocabulary, rank 0 will end up generating 40 corpora serially while ranks 1 and 2 will generate 30 corpora each serially.}
-    \label{fig:CorporaGenerationParallelization}
+    \includegraphics[width=0.6\textwidth]{EL_ALG.png}
+    \caption{General layout of the \gls{el} algorithm. Each \gls{mpi} rank keeps a private copy of the entire \gls{el} structure but only keeps the data of the \glspl{csom} which correspond to it. Each \gls{mpi} rank loads a private copy of the inputs that come from the \gls{mrstsa} algorithm. Then each \gls{mpi} rank processes the input information by means of only the \glspl{cc} which are under its charge, first entering to an \gls{omp} region in order to distribute \glspl{cc} in the rank among different \gls{omp} threads and then leaving the \gls{omp} region and communicating the outputs of all \glspl{cc} in the \gls{el} using \gls{mpi} \gls{ipc} tools. Finally each \gls{mpi} rank saves the status of its \glspl{cc} using \gls{mpi} parallel I/O sentences. \gls{mpi} rank 0 also saves the general structure of the \gls{el}.} 
+    \label{fig:EL_ALG}
 \end{figure}
 
-In terms of Strong scaling (Fig.~\ref{fig:CorporaGenerationStrongScaling}), we run the algorithm in order to create 64 corpora from 64 vocabularies--one corpus per vocabulary. The code generates 64 cross synthesizer SABLE text files and then calls to Festival using \texttt{text2wav} script in order to generate the audio \texttt{wav} files which utter the text in the SABLE files.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.5\textwidth]{CorporaGenerationStrongScaling.png}
-    \caption{Strong scaling test on Cooley nodes. Run time vs. the number of \glspl{cpu}. The problem size stays fixed, that is, the run has to generate 64 corpora. On the other hand the number of processing elements is increased from 1 to 64 \glspl{cpu} in powers of two. Since Cooley nodes have 12 \glspl{cpu} we had to ask for 2 nodes in order to run on 16 \glspl{cpu}, 3 nodes in order to run on 32 \glspl{cpu} and 6 nodes in order to run on 64 \glspl{cpu}.}
-    \label{fig:CorporaGenerationStrongScaling}
-\end{figure}
 
-The straight line in Fig.~\ref{fig:CorporaGenerationStrongScaling} shows a really good scaling of our code. Nevertheless, we have to take into account that each process produces an independent set of corpora and does not need to transmit any data to other processes in the \gls{mpi} session. Then, we do not have \gls{ipc} issues in this code (this is pure parallelization). Since one Cooley Node has 12 \glspl{cpu} we just needed 1 node in order to run 1, 2, 4 or 8 processes, 2 nodes (24 \glspl{cpu}) in order to run 16 processes, 3 nodes (36 \glspl{cpu}) in order to run 32 processes and finally 6 nodes (72 \glspl{cpu}) in order to run 64 processes. Another issue to take into account is that to make this code scale in the way showed by the chart, all the corpora have to have the same size, otherwise--and since the code distributes corporas on different processes in static way--some processes which take over smaller corpora would finish before other processes that take over larger corpora and would waste processing power waiting idly for other processes to finish. We have to think in a way to make the distribution of vocabularies on processes dynamic--such as \gls{omp} dynamic schedule.
 
-In reference to Weak scaling (Fig.~\ref{fig:CorporaGenerationWeakScaling}), we generate one corpus per process, the horizontal line shows that this code scales very well  in terms of weak scaling too.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.5\textwidth]{CorporaGenerationWeakScaling.png}
-    \caption{Weak scaling test on Cooley nodes. Run time vs. the number of \glspl{cpu}. In this case the problem workload assigned to each processing element stays constant and additional elements are used to solve a larger total problem (i.e. as we add more \glspl{cpu} we add more corpora in a way that one corpus is generated by \gls{cpu}).}
-    \label{fig:CorporaGenerationWeakScaling}
-\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1080,9 +1259,9 @@ In reference to Weak scaling (Fig.~\ref{fig:CorporaGenerationWeakScaling}), we g
 
 \subsection{\gls{mrstsa} Implementation}
 
-This algorithm has been implemented in C using the package called FFTW~\cite{fftw} which is an implementation of \gls{fft} available on Cooley. We used \gls{mpi}-\gls{omp} hybrid parallelization approach. We parallelized the \gls{mrstsa} algorithm developed in \cite{dematties2018} by means of \gls{omp} sections using one \gls{omp} section per spectral resolution and running until 5 \gls{omp} threads per Cooley node (Alg. ~\ref{MRSTSA_parallelization}). In terms of \gls{mpi} we processed a set of corpora per \gls{mpi} rank. The algorithm generates certain number of corpora per vocabulary. Supposing that we have $n$ vocabularies and $m$ corpora per vocabulary, we end up with $n m$ corpora. Unlike the corpora generation parallelization algorithm exposed in Alg.~\ref{fig:CorporaGenerationParallelization} and explained in section~\ref{CorpGenImp} in this case we unroll the nested loop that iterates through corpora and vocabularies. The \gls{mpi} parallelization is exposed in Alg~\ref{input_generation_parallelization}
+We implemented the \gls{mrstsa} algorithm in C using the package FFTW~\cite{fftw} which is an implementation of the \gls{fft} available on Cooley. We used \gls{mpi}+\gls{omp} hybrid parallelization approach. We parallelized the \gls{mrstsa} algorithm developed in \cite{Dematties2018} by means of \gls{omp} sections using one \gls{omp} section per spectral resolution and running until 5 \gls{omp} threads per Cooley node (Alg. ~\ref{MRSTSA_parallelization}). In terms of \gls{mpi} we processed a set of corpora per \gls{mpi} rank. The algorithm generates certain number of corpora per vocabulary. Supposing that we have $n$ vocabularies and $m$ corpora per vocabulary, we end up with $n m$ corpora. Unlike the corpora generation parallelization algorithm exposed in Alg.~\ref{fig:CorporaGenerationParallelization} and explained in section~\ref{CorpGenImp} in this case we unroll the nested loop that iterates through corpora and vocabularies. The \gls{mpi} parallelization is exposed in Alg~\ref{input_generation_parallelization}
 
-%This algorithm has been implemented in C using the package called FFTW~\cite{fftw} which is an implementation of \gls{fft} available on Cooley. We used \gls{mpi}-\gls{omp} hybrid parallelization approach. We parallelized the algorithm explained in section \ref{mrstsa} by means of \gls{omp} sections using one \gls{omp} section per spectral resolution and running until 5 \gls{omp} threads per Cooley node (Alg. ~\ref{MRSTSA_parallelization}). In terms of \gls{mpi} we processed a set of corpora per \gls{mpi} rank. The algorithm generates certain number of corpora per vocabulary. Supposing that we have $n$ vocabularies and $m$ corpora per vocabulary, we end up with $n m$ corpora. Unlike the corpora generation parallelization algorithm exposed in Alg.~\ref{fig:CorporaGenerationParallelization} and explained in section~\ref{CorpGenImp} in this case we unroll the nested loop that iterates through corpora and vocabularies. The \gls{mpi} parallelization is exposed in Alg~\ref{input_generation_parallelization}
+%This algorithm has been implemented in C using the package called FFTW~\cite{fftw} which is an implementation of \gls{fft} available on Cooley. We used \gls{mpi}+\gls{omp} hybrid parallelization approach. We parallelized the algorithm explained in section \ref{mrstsa} by means of \gls{omp} sections using one \gls{omp} section per spectral resolution and running until 5 \gls{omp} threads per Cooley node (Alg. ~\ref{MRSTSA_parallelization}). In terms of \gls{mpi} we processed a set of corpora per \gls{mpi} rank. The algorithm generates certain number of corpora per vocabulary. Supposing that we have $n$ vocabularies and $m$ corpora per vocabulary, we end up with $n m$ corpora. Unlike the corpora generation parallelization algorithm exposed in Alg.~\ref{fig:CorporaGenerationParallelization} and explained in section~\ref{CorpGenImp} in this case we unroll the nested loop that iterates through corpora and vocabularies. The \gls{mpi} parallelization is exposed in Alg~\ref{input_generation_parallelization}
 
 \begin{algorithm}
 	\caption{This algorithm is called \gls{mrstsa} and distributes the different spectral resolutions--processing a corpus--among \gls{omp} threads running until 5 \gls{omp} threads concurrently in order to generate such corpus processing.}
@@ -1125,7 +1304,241 @@ The complete parallelization scheme is depicted in Fig.~\ref{fig:MRSTSA_Parallel
     \label{fig:MRSTSA_Parallelization}
 \end{figure}
 
-We tested the scaling capacity of this code on Cooley nodes. In terms of Strong scaling, we run the algorithm in order to process 64 corpora--one corpus per vocabulary. The straight lines in Fig.~\ref{fig:MRSTSA_Scaling}--on the left--show a really good scaling of this code. Even though, we have to take into account that each process/node computes an independent set of corpora and do not need to transmit the data to other processes/nodes in the \gls{mpi} session, we do not have \gls{ipc} issues in this code. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Corpora Generation Implementation}
+\label{CorpGenImp}
+
+%We generate a corpora of 500 words with mono, di and trisyllabic randomly chosen English words with vocabularies of five words using \gls{festival} Synthesis \cite{festival2014}.
+
+%\begin{itemize}
+	%\item Monosyllabic vocabulary: \textit{map, dog, mouse, with, truck.} % and \textit{truck}.
+	%\item Disyllabic vocabulary: \textit{answer, doctor, teacher, summer, tennis.}  %and \textit{tennis}.
+	%\item Trisyllabic vocabulary: \textit{computer, telephone, rectangle, tomato, magazine.} % and \textit{magazine}.
+%\end{itemize}
+
+%We generate a cross synthesizer standard mark up language file with SABLE \cite{sable}. In this file, we instruct \gls{festival} to generate a corpus with 500 words from a vocabulary of 5 words uttered by 10 different voices (8 males and 2 females) available from the synthesizer. The organization of the corpus has certain rules and restrictions in order to avoid biases in the training processes. The voices are sequentially chosen (pseudo-randomly) with the restriction that no voice could utter a second time until all the voices had uttered in their turns. Every voice utters two words per turn--in pseudo-random order--and no word is not be repeated until all the words are used by such voice. We use the following English speaking voices provided by Festival: \texttt{cmu\_us\_fem\_cg, cmu\_us\_gka\_cg, cmu\_us\_ksp\_cg, cmu\_us\_rxr\_cg, cmu\_us\_jmk\_cg, cmu\_us\_rms\_cg, cmu\_us\_slt\_cg, cmu\_us\_jmk\_arctic\_clunits, cmu\_us\_rms\_arctic\_clunits, cmu\_us\_slt\_arctic\_clunits}.
+
+%Every word in the audio file is followed by a silence gap whose time is equivalent to the uttering time of the monosyllabic word \textit{cat}, uttered by the same voice used for the last word. We use the \texttt{text2wave} program provided by Festival in order to generate a \texttt{wav} file from the SABLE file.
+
+We generated corpora with randomly chosen English mono and multisyllabic words~\cite{Dematties2018} using \gls{festival} Synthesis \cite{festival2014}. To that end, we generated cross synthesizer standard mark up language SABLE \cite{sable} files. In those files, we instructed \gls{festival} to generate audio \texttt{wav} files with the corpora uttered by different voices available from the synthesizer.
+
+All the code that generates the corpora is implemented in Python and parallelized by means of a \gls{mpi} for Python package called \texttt{mpi4py}. The algorithmic implementation of this parallelization is shown in Alg.~\ref{corpora_generation_parallelization} and Fig.~\ref{fig:CorporaGenerationParallelization}.
+
+\begin{algorithm}
+	\caption{This algorithm distributes vocabularies among \gls{mpi} processes. In this algorithm we run one \gls{mpi} process per \gls{cpu} on Cooley.}
+\label{corpora_generation_parallelization}
+\begin{algorithmic}[1]
+	\STATE {\texttt{numberOfProcesses} = getNumberOfProcesses()}
+	\STATE {\texttt{processNumber} = getProcessNumber()}
+	\FOR{\texttt{vocabulary} = 0 \TO \texttt{vocabulary} = \texttt{numberOfVocabularies}}
+		\IF{\texttt{corpus}\%\texttt{numberOfProcesses}==\texttt{processNumber}}
+			\FOR{\texttt{corpus} = 0 \TO \texttt{corpus} = \texttt{numberOfCorpora}}
+				\STATE {Call \gls{festival} to generate an audio file from this \texttt{corpus} from this \texttt{vocabulary}...}
+			\ENDFOR
+		\ENDIF
+	\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.4\textwidth]{CorporaGenerationParallelization.png}
+    \caption{Distribution of corpora generation among Python \gls{mpi} ranks. The corpora generation tasks are distributed among Python \gls{mpi} ranks as a deck of cards is distributed among players. Each \gls{mpi} rank will end up with a set of vocabularies to generate the corpora corresponding to such vocabularies (i.e. if we have 10 corpora per vocabulary, rank 0 will end up generating 40 corpora serially while ranks 1 and 2 will generate 30 corpora each serially.}
+    \label{fig:CorporaGenerationParallelization}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Results}
+
+Parallel scalability is a measurement that indicates how efficient is a code when using an increasing number of parallel processing elements--Nodes or Processes and \glspl{cpu} or Threads--on a computational resource. There are two ways to measure the parallel performance of a given application. The measure to be applied will depend on whether the application is \gls{cpu}-bound or memory-bound. Such measurements are referred to as \emph{strong} and \emph{weak} scaling, respectively~\cite{noauthor_measuring_nodate}.
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{\glsfirst{el} Scaling Tests}
+
+Fig. \ref{fig:Strong_Scaling} shows the strong scaling capacity of our code in terms of run time vs. number of processing elements used for the task. In these tests we constrained the code to run one \gls{mpi} rank per Cooley node. Each \gls{mpi} rank spreads an specific number of threads through the different \glspl{cpu} in its corresponding node (Fig. \ref{fig:Encoder_Parallelization}).
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{Strong_Scaling.png}
+    \caption{Strong scaling tests on Cooley nodes. Left: Strong scaling. Run time vs. the number of nodes for different number of threads per node. The problem size stays fixed but the number of processing elements are increased. Straight lines in logarithmic scales indicates good scaling capacity. Right: Strong scaling efficiency vs. the number of nodes for different numbers of threads per node. Let $t_1$ be the amount of time to complete a work unit with 1 processing element, and $t_N$ the amount of time to complete the same unit of work with $N$ processing elements, the Strong Scaling Efficiency is: $t_1 / (N * t_N) * 100$.}
+    \label{fig:Strong_Scaling}
+\end{figure}
+
+For the tests shown in Fig.~\ref{fig:Strong_Scaling} we generated an \gls{el} whose specifications are shown in Table~\ref{Medium_Model}.
+
+\begin{table}[h!]
+\centering
+\caption{\gls{el} of normal size to test strong scaling on 1, 2, 4 and 8 computing nodes. The different \glspl{rf}, percentages and dimensionalities are explained in~\cite{Dematties2018}.}
+\begin{tabular}{|c|l|l|l|l|l|l|l|}
+\hline
+Model  & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Number\\ of CCs\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Afferent\\  RF\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Afferent\\ \%\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Lateral\\ RF\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Lateral\\ \%\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Population\\ Dimensionality\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Potential\\ \%\end{tabular}} \\ \hline
+Normal & 23 x 23                                                                      & 5 x 127                                                                      & 5\%                                                                        & 9 x 9                                                                     & 90\%                                                                      & 15 x 15                                                                                  & 3\%                                                                         \\ \hline
+\end{tabular}
+\label{Medium_Model}
+\end{table}
+
+Firstly, this \gls{el} has 529 \glspl{cc}. In order to avoid scaling efficiency degradation, the \gls{el} has to keep certain number of \glspl{cc} per \gls{omp} thread. The worst case in Fig.~\ref{fig:Strong_Scaling} is for 8 nodes running 8 threads each (i.e. 64 threads). In such case we ended up having approximately 8.2 \glspl{cc} per \gls{omp} thread. As can be seen in Fig.~\ref{fig:Strong_Scaling} the strong scaling efficiency was never below 80\%. 
+
+Since our computational model is intended to be run on leadership supercomputers--such as Theta at \gls{alcf}--in the future, it was necessary to test the Strong Scaling Efficiency of this on more computing nodes at Cooley. Specifically, we wanted to test the behaviour of the scaling running on up to 64 nodes with 8 \gls{omp} threads each since the more nodes you incorporate, the more \gls{ipc} load you have. In order to keep a considerable number of computing nodes per \gls{omp} thread we generated an \gls{el} with the specifications shown in Table~\ref{Big_Model}. 
+
+\begin{table}[h!]
+\centering
+\caption{\gls{el} of large size to test strong scaling on 8, 16, 32 and 64 computing nodes. The different \glspl{rf}, percentages and dimensionalities are explained in~\cite{Dematties2018}.}
+\begin{tabular}{|c|l|l|l|l|l|l|l|}
+\hline
+Model  & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Number\\ of CCs\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Afferent\\  RF\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Afferent\\ \%\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Lateral\\ RF\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Lateral\\ \%\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Population\\ Dimensionality\end{tabular}} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}Potential\\ \%\end{tabular}} \\ \hline
+Big & 128 x 128                                                                      & 5 x 127                                                                      & 5\%                                                                        & 9 x 9                                                                     & 90\%                                                                      & 15 x 15                                                                                  & 3\%                                                                         \\ \hline
+\end{tabular}
+\label{Big_Model}
+\end{table}
+
+This model has 16384 \glspl{cc} and for the worst case in which there are 64 computing nodes with 8 \gls{omp} threads each the model ended up distributing 32 \glspl{cc} per \gls{omp} thread. Each \gls{cc} in this model has 225 neural units to reach a total of 3686400 neural units. Each neural unit has 31 proximal (afferent) synapses and 432 distal (lateral) synapses to reach a total of 1706803200 synapses in the \gls{el}. Given the size of this model we could not run experiments from 1, 2 nor 4 computing nodes since the amount of time a simulation of such characteristics could take far exceeded the time provided by \texttt{qsub} command on Cooley. So we started the tests from 8 computing nodes for 1, 2, 4 and 8 \gls{omp} threads as shown in Fig.~\ref{fig:Strong_Scaling1}.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{Strong_Scaling1.png}
+    \caption{Strong scaling tests on Cooley nodes. Left: Strong scaling. Run time vs. the number of nodes for different number of threads per node. The problem size stays fixed but the number of processing elements are increased. Straight lines in logarithmic scales indicates good scaling capacity. Right: Strong scaling efficiency vs. the number of nodes for different numbers of threads per node. Let $t_1$ be the amount of time to complete a work unit with 1 processing element, and $t_N$ the amount of time to complete the same unit of work with $N$ processing elements, the Strong Scaling Efficiency is: $t_1 / (N * t_N) * 100$.}
+    \label{fig:Strong_Scaling1}
+\end{figure}
+
+As can be seen in the figure, the larger amount of compute nodes (\gls{mpi} ranks) with the consequent growth of \gls{mpi} \gls{ipc} load did not affect the strong scaling efficiency of the model which was well above the 85\%.
+
+In reference to Weak Scaling, in order to keep the number of \glspl{cc} per \gls{omp} thread ratio constant we used the \glspl{el} detailed in the Table~\ref{Weak_Scaling_Models}. For all the cases detailed in the table, the ratio of \glspl{cc} per \gls{omp} thread was 32.
+
+\begin{table}[h!]
+\centering
+\caption{\glspl{el} of different sizes to test weak scaling on 1, 2, 4, 8, 16, 32 and 64 computing nodes. The different \glspl{rf}, percentages and dimensionalities are explained in~\cite{Dematties2018}.}
+\begin{tabular}{|c|c|c|c|c|c|c|c|}
+\hline
+\begin{tabular}[c]{@{}c@{}}Number of\\ Nodes\end{tabular} & \begin{tabular}[c]{@{}c@{}}Number\\ of CCs\end{tabular} & \begin{tabular}[c]{@{}c@{}}Afferent\\  RF\end{tabular} & \begin{tabular}[c]{@{}c@{}}Afferent\\ \%\end{tabular} & \begin{tabular}[c]{@{}c@{}}Lateral\\ RF\end{tabular} & \begin{tabular}[c]{@{}c@{}}Lateral\\ \%\end{tabular} & \begin{tabular}[c]{@{}c@{}}Population\\ Dimensionality\end{tabular} & \begin{tabular}[c]{@{}c@{}}Potential\\ \%\end{tabular} \\ \hline
+1 Node                                                    & 16 x 16                                                 & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+2 Nodes                                                   & 16 x 32                                                 & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+4 Nodes                                                   & 32 x 32                                                 & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+8 Nodes                                                   & 32 x 64                                                 & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+16 Nodes                                                  & 64 x 64                                                 & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+32 Nodes                                                  & 64 x 128                                                & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+64 Nodes                                                  & 128 x 128                                               & 5 x 127                                                 & 5\%                                                   & 9 x 9                                                & 90\%                                                 & 15 x 15                                                             & 3\%                                                    \\ \hline
+\end{tabular}
+\label{Weak_Scaling_Models}
+\end{table}
+
+Fig.~\ref{fig:Weak_Scaling} shows the weak scaling performance of the model. As can be seen in the figure, the scaling efficiency was always above the 75\%. This measures show that the model parallel execution is not affected by \gls{mpi} \gls{ipc} load as the number of computing nodes increase. This scenario is specially evident for the case of one \gls{omp} thread in whose case the worst efficiency is over the 95\%.
+
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{Weak_Scaling.png}
+    \caption{Weak scaling tests on Cooley nodes. Left: Weak scaling. Run time vs. the number of nodes for different number of threads per node. In this case the problem workload assigned to each processing element stays constant and additional elements are used to solve a larger total problem (i.e. a problem that would not fit in the available RAM on a single node). Right: Weak scaling efficiency vs. the number of nodes for different numbers of threads per node. Let $t_1$ be the amount of time to complete a work unit with 1 processing element, and $t_N$ the amount of time to complete $N$ times the same unit of work with $N$ processing elements, the Weak Scaling Efficiency is: $t_1 / t_N * 100$.}
+    \label{fig:Weak_Scaling}
+\end{figure}
+
+%Fig. \ref{fig:Strong_Weak} shows the scaling capacity of our code in terms of run time vs. number of processing elements used for the task. In these tests we constrained the code to run one \gls{mpi} rank per Cooley node. Each \gls{mpi} rank spreads an specific number of threads through the different \glspl{cpu} in its corresponding node (Fig. \ref{fig:EncoderParallelization} A and B).
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=1.0\textwidth]{Strong_Weak.png}
+    %\caption{Strong and Weak scaling tests on Cooley nodes. Left: Strong scaling. Run time vs. the number of nodes for different number of threads per node. The problem size stays fixed but the number of processing elements are increased. Right: Weak scaling. Run time vs. the number of nodes for 8 threads per node. In this case the problem workload assigned to each processing element stays constant and additional elements are used to solve a larger total problem (i.e. a problem that would not fit in the available RAM on a single node).}
+    %\label{fig:Strong_Weak}
+%\end{figure}
+
+
+Straight lines in the Figs.~\ref{fig:Strong_Scaling} and~\ref{fig:Strong_Scaling1} show an initially good strong scalability of our code while the small slope exhibited by Fig. \ref{fig:Weak_Scaling} allows us to foresee a good weak scaling performance of our code in high end leadership supercomputers too. All those visual results are supported by good measures of efficiency.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{\glsfirst{mrstsa} Scaling Tests}
+
+We tested the scaling capacity of this code on Cooley nodes. In terms of Strong scaling, we run the algorithm in order to process 64 corpora--one corpus per vocabulary. The straight lines in Fig.~\ref{fig:MRSTSA_Scaling}--on the left--show a really good scaling of this code. Nevertheless, we have to take into account that each process/node computes an independent set of corpora and do not need to transmit the data to other processes/nodes in the \gls{mpi} session, we do not have \gls{ipc} issues in this code. This is called \emph{Embarrassingly parallel}~\cite{noauthor_embarrassingly_2018}. 
 
 \begin{figure}[h!]
     \centering
@@ -1134,9 +1547,153 @@ We tested the scaling capacity of this code on Cooley nodes. In terms of Strong 
     \label{fig:MRSTSA_Scaling}
 \end{figure}
 
-Each process run in a different node. We use an amount of \gls{omp} threads which ranges from 1 to 5. Five is the number of spectral components in the \gls{mrstsa} algorithm. Another issue to take into account is that in order to make this code scale in the way showed by the chart, all the corpora have to have the same size, otherwise--and since the code distributes corporas on different processes in static way--some processes which take over smaller corpora would finish before other processes that take over larger corpora. We have to think in a way to make the distribution of corpora on processes dynamic--such as \gls{omp} dynamic schedule.
+Each process run in a different node. We use a number of \gls{omp} threads which ranges from 1 to 5. Five is the number of spectral components in the \gls{mrstsa} algorithm~\cite{Dematties2018}. Another issue to take into account is that in order to make this code scale in the way showed by the chart, all the corpora have to have the same size, otherwise--and since the code distributes corporas on different processes in static way--some processes which take over smaller corpora would finish before other processes that take over larger corpora producing considerable load imbalance in the \gls{mpi} environment. We have to think in a way to make the distribution of corpora on processes dynamic--such as \gls{omp} dynamic schedule. Nevertheless, trying to balance the load among the different \gls{mpi} ranks could produce a severe degradation of Efficiency originated in the increased load of \gls{ipc} that such techniques require~\cite{hu2012biophysically}.~\info{As in \cite{hu2012biophysically} and in our very same approach we could try balance the computational load using \gls{omp} threads. Running one \gls{omp} thread for several corpora and eliminating \gls{omp} sections inside each \gls{mrstsa}. This will go into the future work.}
 
-In reference to Weak scaling, we generate one corpus per process, the horizontal line shows that this code scales very well  in terms of weak scaling too.
+In reference to Weak scaling, we processed one corpus per \gls{mpi} rank by means of the obvious strategy of processing one corpus for one \gls{mpi} rank, two corpora for two \gls{mpi} rank, four corpora for four \gls{mpi} rank and so on. The horizontal line in Fig.~\ref{fig:MRSTSA_Scaling}--on the right--shows that this code scales very well  in terms of weak scaling too.
+
+Finally, Fig.~\ref{fig:MRSTSA_Scaling_Efficiency} sustains the behavior of the charts with Strong Scaling Efficiencies well above the 96\% and with Weak Scaling Efficiencies above the 93\%.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{MRSTSA_Scaling_Efficiency.png}
+    \caption{Strong and Weak scaling efficiency on Cooley nodes. Left: Strong scaling efficiency. Efficiency vs. the number of nodes for different number of threads per node. Let $t_1$ be the amount of time to complete a work unit with 1 processing element, and $t_N$ the amount of time to complete the same unit of work with $N$ processing elements, the Strong Scaling Efficiency is: $t_1 / (N * t_N) * 100$. Right: Weak scaling efficiency. Efficiency vs. the number of nodes for 5 threads per node. Let $t_1$ be the amount of time to complete a work unit with 1 processing element, and $t_N$ the amount of time to complete $N$ times the same unit of work with $N$ processing elements, the Weak Scaling Efficiency is: $t_1 / t_N * 100$.}
+    \label{fig:MRSTSA_Scaling_Efficiency}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Corpora Generation Scaling Tests}
+
+In terms of Strong and Weak scaling (Fig.~\ref{fig:CorporaGenerationScaling}), we ran the algorithm in order to create 64 corpora from 64 vocabularies--one corpus per vocabulary. The code generated 64 cross synthesizer SABLE text files and then called to Festival using \texttt{text2wav} script in order to generate the audio \texttt{wav} files which uttered the text in the SABLE files.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1.0\textwidth]{CorporaGenerationScaling.png}
+    \caption{Strong and Weak scaling test on Cooley nodes. Left: Strong Scaling. Run time and Efficiency vs. the number of \glspl{cpu}. The problem size stays fixed, that is, the run has to generate 64 corpora. On the other hand the number of processing elements is increased from 1 to 64 \glspl{cpu} in powers of two. Right: Weak scaling. Run time and Efficiency vs. the number of \glspl{cpu}. In this case the problem workload assigned to each processing element stays constant and additional elements are used to solve a larger total problem (i.e. as we add more \glspl{cpu} we add more corpora in a way that one corpus is generated by \gls{cpu}). Since Cooley nodes have 12 \glspl{cpu} we had to ask for 2 nodes in order to run on 16 \glspl{cpu}, 3 nodes in order to run on 32 \glspl{cpu} and 6 nodes in order to run on 64 \glspl{cpu}.}
+    \label{fig:CorporaGenerationScaling}
+\end{figure}
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.5\textwidth]{CorporaGenerationStrongScaling.png}
+    %\caption{Strong scaling test on Cooley nodes. Run time vs. the number of \glspl{cpu}. The problem size stays fixed, that is, the run has to generate 64 corpora. On the other hand the number of processing elements is increased from 1 to 64 \glspl{cpu} in powers of two. Since Cooley nodes have 12 \glspl{cpu} we had to ask for 2 nodes in order to run on 16 \glspl{cpu}, 3 nodes in order to run on 32 \glspl{cpu} and 6 nodes in order to run on 64 \glspl{cpu}.}
+    %\label{fig:CorporaGenerationStrongScaling}
+%\end{figure}
+
+The straight line in Fig.~\ref{fig:CorporaGenerationScaling} upper-left shows a good scaling of our code. Nevertheless, we have to take into account that each process produces an independent set of corpora and does not need to transmit any data to other processes in the \gls{mpi} session. Then, we did not have \gls{ipc} issues in this code (this is pure parallelization, also called \emph{Embarrassingly parallel}~\cite{noauthor_embarrassingly_2018}).
+
+In this case we ran one \gls{mpi} rank per \gls{cpu}. Since one Cooley Node has 12 \glspl{cpu} we just needed 1 node in order to run 1, 2, 4 or 8 processes, 2 nodes (24 \glspl{cpu}) in order to run 16 processes, 3 nodes (36 \glspl{cpu}) in order to run 32 processes and finally 6 nodes (72 \glspl{cpu}) in order to run 64 processes.
+
+Another issue to take into account is that to make this code scale in the way showed by the chart, all the corpora have to have the same size, otherwise--and since the code distributes corporas on different processes in static way--some processes which took over smaller corpora would have finished before other processes that took over larger corpora and would have wasted processing power waiting idly for other processes to finish. We have to think in a way to make the distribution of vocabularies on processes dynamic--such as \gls{omp} dynamic schedule. Nevertheless, trying to balance the load among the different \gls{mpi} ranks could produce a severe degradation of Efficiency originated in the increased \gls{ipc} load that such techniques require~\cite{hu2012biophysically}.~\info{Put this issue to be improved into the future work.}
+
+In Fig.~\ref{fig:CorporaGenerationScaling} down-left we can see that the minimum Strong Scaling Efficiency is well above the 75\%.  
+
+In reference to Weak scaling (Fig.~\ref{fig:CorporaGenerationScaling} upper-right), we generated one corpus per process using one corpus for one \gls{mpi} rank, two corpora for two \gls{mpi} ranks and so on. The horizontal line in the figure shows that this code scales well  in terms of weak scaling too and--as Fig.~\ref{fig:CorporaGenerationScaling} down-right shows--the Weak Scaling Efficiency of the code was never below the 70\%.
+
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.5\textwidth]{CorporaGenerationWeakScaling.png}
+    %\caption{Weak scaling test on Cooley nodes. Run time vs. the number of \glspl{cpu}. In this case the problem workload assigned to each processing element stays constant and additional elements are used to solve a larger total problem (i.e. as we add more \glspl{cpu} we add more corpora in a way that one corpus is generated by \gls{cpu}).}
+    %\label{fig:CorporaGenerationWeakScaling}
+%\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Discussion}
+
+\info{\textbf{What did you do and find?} A sentence or two.}
+\info{\textbf{What it means? Why it is important?} Interpret your findings rather than report it descriptively. Link your findings to prior research. Highlight the parts of your research that are new. Exploration of new research questions. New ideas or perspectives. Important new evidence for existing theories}
+\info{\textbf{Strengths and Limitations} Discuss the implications of the limitations.}
+\info{\textbf{Recommendations for Future Research}}
+
+
+
+
+\section{Conclusions}
+\improvement{\textbf{Tight}}
+\improvement{\textbf{To the point}}
+\improvement{\textbf{Clearly follow from your research question, methods, results, discussion}}
+\improvement{\textbf{Assertive but balanced}}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1689,25 +2246,25 @@ In reference to Weak scaling, we generate one corpus per process, the horizontal
 
 
 
-~\\
-~\\
-~\\
-~\\
+%~\\
+%~\\
+%~\\
+%~\\
 
-~\\
-~\\
-~\\
-~\\
+%~\\
+%~\\
+%~\\
+%~\\
 
-~\\
-~\\
-~\\
-~\\
+%~\\
+%~\\
+%~\\
+%~\\
 
-~\\
-~\\
-~\\
-~\\
+%~\\
+%~\\
+%~\\
+%~\\
 
 
 
